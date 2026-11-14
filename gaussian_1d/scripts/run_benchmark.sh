@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-variant_dir="$1"
-mode="$2"
-shift 2
-shared_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-default_dataset="$variant_dir/../data/processed_raw_names"
+mode="$1"
+shift
+scripts_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+project_dir="$(dirname -- "$scripts_dir")"
+default_dataset="$project_dir/../data/processed_raw_names"
 if [[ ! -d "$default_dataset" ]]; then
-    default_dataset="$variant_dir/../data/processed"
+    default_dataset="$project_dir/../data/processed"
 fi
 dataset_dir="${DATASET_DIR:-$default_dataset}"
-results_dir="${RESULTS_DIR:-$variant_dir/results}"
+results_dir="${RESULTS_DIR:-$project_dir/results}"
 export_images="${EXPORT_IMAGES:-1}"
 args=()
 
@@ -66,21 +66,20 @@ elif ! python3 -c 'import PIL' >/dev/null 2>&1; then
     exit 1
 fi
 
-mkdir -p -- "$variant_dir/build"
+mkdir -p -- "$project_dir/build"
 # Keep the build and benchmark together so another run cannot replace the binary.
-exec 9>"$variant_dir/build/.benchmark.lock"
+exec 9>"$project_dir/build/.benchmark.lock"
 flock 9
-bash "$variant_dir/build_gcc.sh"
+bash "$project_dir/build_gcc.sh"
 mkdir -p -- "$output_parent"
 output="$output_parent/run_$(date +%Y%m%d_%H%M%S_%N)"
-"$variant_dir/build/gaussian_bench" "$dataset_dir" "$output" "${args[@]}"
+"$project_dir/build/gaussian_bench" "$dataset_dir" "$output" "${args[@]}"
 exec 9>&-
-python3 "$shared_dir/summarize_results.py" "$output"
+python3 "$scripts_dir/summarize_results.py" "$output"
 if [[ "$export_images" == 1 ]]; then
-    python3 "$shared_dir/export_png.py" "$output"
-    python3 "$shared_dir/visualize.py" "$dataset_dir" "$output"
+    python3 "$scripts_dir/export_png.py" "$output" --dataset "$dataset_dir"
 fi
 if [[ "$mode" == full ]] && python3 -c 'import matplotlib' >/dev/null 2>&1; then
-    python3 "$shared_dir/plot_results.py" "$output"
+    python3 "$scripts_dir/plot_results.py" "$output"
 fi
 printf '\nResults: %s\nSummary: %s\n' "$output" "$output/summary.csv"

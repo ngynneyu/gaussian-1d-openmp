@@ -8,7 +8,7 @@ Cấu hình mặc định dùng kernel **19 × 19, σ = 3**, với 19 hệ số 
 
 Bản OpenMP chia các hàng bằng `schedule(static)` trong cùng một vùng song song. Hàng rào đồng bộ sau lượt ngang bảo đảm lượt dọc đọc được cả các hàng trung gian do luồng khác xử lý. Benchmark đo Sequential và OpenMP với **2, 4, 8, 16, 20 luồng**. Chương trình cấp phát bộ đệm ngoài khoảng đo và tính thời gian cho cả hai lượt lọc. Mỗi cấu hình chạy một lần warm-up rồi đo 10 lần liên tiếp để lấy median. Cấu hình bắt đầu thay đổi sau mỗi ảnh. `run_config.txt` ghi số CPU logic mà OpenMP thấy lúc chạy.
 
-Thư mục này chứa mã lọc 1D, trình đọc ảnh, chương trình benchmark và các script xuất kết quả.
+`src/` chứa thuật toán và mã benchmark C++, `scripts/` xử lý kết quả, còn `tests/` chứa bộ kiểm thử. Các lệnh build, chạy thử và benchmark nằm ngay trong thư mục này.
 
 ## Chạy trong Ubuntu WSL2
 
@@ -17,7 +17,7 @@ Mở terminal Ubuntu trong VS Code rồi chạy các lệnh sau để build và 
 ```bash
 cd gaussian_1d
 bash build_gcc.sh
-python3 test_gaussian.py build/gaussian_seq build/gaussian_omp --threads 2 4 8 16 20
+python3 tests/test_gaussian.py build/gaussian_seq build/gaussian_omp --threads 2 4 8 16 20
 ```
 
 Lệnh sau đo `image_1` ở cả ba kích thước với kernel **19 × 19, σ = 3**. Nó xuất ảnh PNG nếu Python đã có Pillow. Chọn tên thư mục kết quả mới cho mỗi lần chạy.
@@ -26,7 +26,7 @@ Lệnh sau đo `image_1` ở cả ba kích thước với kernel **19 × 19, σ 
 mkdir -p results
 out="results/demo_k19_s3_$(date +%Y%m%d_%H%M%S)"
 ./build/gaussian_bench ../data/processed_raw_names "$out" 19 3 image_1.bin &&
-python3 export_png.py "$out"
+python3 scripts/export_png.py "$out" --dataset ../data/processed_raw_names
 ```
 
 Ảnh nằm trong `$out/images/<kích thước>/<chế độ>/`. Ví dụ, ảnh 1024 × 1024 của bản OpenMP 8 luồng nằm ở `$out/images/1024/omp8/image_1.png`.
@@ -39,4 +39,4 @@ out="results/full_k19_s3_$(date +%Y%m%d_%H%M%S)"
 ./build/gaussian_bench ../data/processed_raw_names "$out"
 ```
 
-`metrics.csv` chứa median, speedup so với Sequential 1D, hiệu suất song song, MaxAE và RMSE. Khi so sánh 1D với 2D, dùng thời gian chạy ở cùng kích thước ảnh, kernel, sigma và số luồng. Để xuất PNG cho lượt này, chạy `python3 export_png.py "$out"`. Để tạo biểu đồ, chạy `python3 plot_results.py "$out"` trong môi trường đã có Matplotlib.
+`metrics.csv` chứa median, speedup so với Sequential 1D, hiệu suất song song, MaxAE và RMSE. Để xuất PNG và ảnh đối chiếu cho lượt này, chạy `python3 scripts/export_png.py "$out" --dataset ../data/processed_raw_names`. Để tạo biểu đồ, chạy `python3 scripts/plot_results.py "$out"` trong môi trường đã có Matplotlib.
