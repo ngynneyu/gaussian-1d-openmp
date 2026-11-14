@@ -1,0 +1,54 @@
+# Gaussian Blur với C++ và OpenMP
+
+Hai bản dùng cùng dữ liệu ảnh xám, mặc định kernel **19 × 19, σ = 3** và xử lý biên bằng replicate padding.
+
+| Thư mục | Thuật toán | Số luồng OpenMP |
+| --- | --- | --- |
+| [`gaussian/`](gaussian/README.md) | Tích chập 2D trực tiếp | 1, 2, 4, 8 |
+| [`gaussian_1d/`](gaussian_1d/README.md) | Hai lượt tích chập 1D theo chiều ngang và dọc | 2, 4, 8, 16, 20 |
+
+Có thể biên dịch và chạy trực tiếp trong PowerShell bằng GCC x64. [Windows cho Gaussian 1D](gaussian_1d/README.md#chạy-trực-tiếp-trên-windows) · [Windows cho Gaussian 2D](gaussian/README.md#biên-dịch-trên-windows-bằng-gcc)
+
+## Chuẩn bị dữ liệu
+
+Mở terminal Ubuntu trong VS Code tại thư mục gốc của repo. Cần GCC có OpenMP, Python 3 và Pillow. Bước tiền xử lý cần thêm NumPy. Biểu đồ cần Matplotlib. Nếu Ubuntu chưa có trình biên dịch hoặc `venv`, cài bằng `sudo apt update && sudo apt install build-essential python3-venv`.
+
+Đặt ảnh gốc của bạn trong `data/raw/`. Mỗi ảnh cần rộng và cao ít nhất 2048 pixel. Benchmark toàn bộ dùng 20 ảnh gốc. Để thử một ảnh, có thể tiền xử lý với `--expected 1` rồi truyền tên tệp `.bin` tương ứng cho `test_one.sh`.
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+python3 -m pip install numpy pillow matplotlib
+python3 scripts/preprocess.py --input data/raw --output data/processed_raw_names --preview
+```
+
+Nếu đã có các thư mục 512, 1024 và 2048 trong `data/processed_raw_names`, có thể chạy thẳng phần demo. Script cũng nhận `data/processed` nếu dự án dùng cấu trúc dữ liệu của repo nhóm. Tệp đầu ra giữ tên ảnh gốc, ví dụ `image_2.jpg` thành `image_2.png`.
+
+Khi tạo lại dữ liệu, truyền `--output` với một thư mục mới, rồi dùng `DATASET_DIR` để chọn bộ dữ liệu đó khi chạy benchmark. Script công bố thư mục đầu ra sau khi đã ghi xong toàn bộ ảnh và `metadata.csv`.
+
+## Chạy một ảnh
+
+```bash
+bash gaussian_1d/test_one.sh 1024 image_1.bin
+```
+
+Script tự biên dịch, đo Sequential và OpenMP trên ảnh đã chọn rồi xuất PNG. Mở `gaussian_1d/results/single/1024/run_…/previews/1024/image_1_preview.png` để xem ảnh xám đầu vào và ảnh sau lọc đặt cạnh nhau ở cùng độ phân giải. Đường dẫn chính xác được in khi script chạy xong. Để chạy bản 2D, dùng `bash gaussian/test_one.sh 1024 image_1.bin`.
+
+## Benchmark toàn bộ
+
+```bash
+bash gaussian_1d/run_full.sh
+EXPORT_IMAGES=0 bash gaussian/run_full.sh
+```
+
+Mỗi lượt có một thư mục mới dưới `results/full/` của bản tương ứng. Có thể truyền đường dẫn bằng `bash gaussian_1d/run_full.sh <dataset_dir> <results_dir>` hoặc đặt `DATASET_DIR` và `RESULTS_DIR` trước lệnh. Mặc định script xuất PGM, PNG và ảnh đối chiếu. `EXPORT_IMAGES=0` chỉ bỏ ảnh đầu vào và đầu ra. Nếu có Matplotlib, script vẫn vẽ ba biểu đồ từ số liệu đo.
+
+| Tệp hoặc thư mục | Nội dung |
+| --- | --- |
+| `timings_raw.csv` | Thời gian của từng lượt đo. |
+| `metrics.csv` | Median, speedup, hiệu suất và sai số cho từng ảnh. |
+| `summary.csv` | Median qua các ảnh cùng kích thước và cấu hình, kèm MaxAE và RMSE lớn nhất. |
+| `run_config.txt` | Kernel, sigma, kích thước, số luồng và môi trường OpenMP. |
+| `images/`, `previews/` | Ảnh đã lọc theo số luồng và ảnh đối chiếu trước/sau. |
+
+Mỗi cấu hình chạy một lần warm-up rồi đo 10 lần liên tiếp. Cấu hình bắt đầu thay đổi sau mỗi ảnh. Việc đọc ảnh, ghi tệp và tạo preview diễn ra ngoài phạm vi tính giờ. Ảnh gốc, dữ liệu tiền xử lý, thư mục build và kết quả nằm trong `.gitignore`.

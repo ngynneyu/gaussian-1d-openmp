@@ -1,0 +1,5 @@
+/data/processed/
+/data/processed_raw_names/
+/data/raw/
+/.venv/
+__pycache__/
