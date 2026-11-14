@@ -13,11 +13,49 @@
 
 #ifdef _WIN32
 #include <direct.h>
+#include <windows.h>
 #endif
 
 enum { DATASET_IMAGES = 20, REPETITIONS = 10, CONFIGURATIONS = OPENMP_CONFIGS + 1 };
 static const int supported_sizes[] = {512, 1024, 2048};
 static const char columns[] = "image,width,height,kernel_size,sigma,implementation,threads";
+
+#ifdef _WIN32
+typedef LONGLONG BenchmarkTime;
+static double milliseconds_per_tick;
+static const char benchmark_clock_name[] = "QueryPerformanceCounter";
+
+static void initialize_benchmark_clock(void) {
+    LARGE_INTEGER frequency;
+    if (!QueryPerformanceFrequency(&frequency) || frequency.QuadPart <= 0) {
+        fail("Cannot initialize the Windows performance counter");
+    }
+    milliseconds_per_tick = 1000.0 / (double)frequency.QuadPart;
+}
+
+static BenchmarkTime benchmark_now(void) {
+    LARGE_INTEGER counter;
+    if (!QueryPerformanceCounter(&counter)) {
+        fail("Cannot read the Windows performance counter");
+    }
+    return counter.QuadPart;
+}
+
+static double elapsed_ms(BenchmarkTime start, BenchmarkTime end) {
+    return (double)(end - start) * milliseconds_per_tick;
+}
+#else
+typedef double BenchmarkTime;
+static const char benchmark_clock_name[] = "omp_get_wtime";
+
+static BenchmarkTime benchmark_now(void) {
+    return omp_get_wtime();
+}
+
+static double elapsed_ms(BenchmarkTime start, BenchmarkTime end) {
+    return (end - start) * 1000.0;
+}
+#endif
 
 typedef struct {
     const char *data;
@@ -167,14 +205,14 @@ static void measure(const Image *input, const Kernel *kernel, double *intermedia
                     Measurement *result, int threads) {
     for (int run = -1; run < REPETITIONS; ++run) {
         int actual = 1;
-        const double start = run >= 0 ? omp_get_wtime() : 0.0;
+        const BenchmarkTime start = run >= 0 ? benchmark_now() : 0;
         if (threads == 1) {
             blur_sequential(input, kernel, intermediate, result->pixels);
         } else {
             actual = blur_openmp(input, kernel, intermediate, result->pixels, threads);
         }
         if (run >= 0) {
-            result->samples[run] = (omp_get_wtime() - start) * 1000.0;
+            result->samples[run] = elapsed_ms(start, benchmark_now());
         }
         if (actual != threads) {
             fail("OpenMP supplied %d threads during %s, requested %d", actual,
@@ -239,10 +277,10 @@ static void write_metadata(const Options *options) {
     }
     fprintf(file, "\nlogical_cpus_available=%d\nkernel_size=%d\nsigma=%.*g"
                   "\nborder=replicate\nalgorithm=separable 1D\nwarmup=1\nrepetitions=%d"
-                  "\nclock=omp_get_wtime\nmeasurement_order=cyclic_by_image"
+                  "\nclock=%s\nmeasurement_order=cyclic_by_image"
                   "\nopenmp_macro=%d\nopenmp_dynamic=disabled\ncompiler=%s\n",
             omp_get_num_procs(), options->kernel_size, DBL_DECIMAL_DIG, options->sigma,
-            REPETITIONS, _OPENMP, __VERSION__);
+            REPETITIONS, benchmark_clock_name, _OPENMP, __VERSION__);
     const char *keys[] = {"OMP_THREAD_LIMIT", "OMP_PROC_BIND", "OMP_PLACES", "OMP_WAIT_POLICY",
                           "GOMP_CPU_AFFINITY"};
     for (size_t i = 0; i < sizeof(keys) / sizeof(keys[0]); ++i) {
@@ -476,6 +514,9 @@ int main(int argc, char *argv[]) {
         fail("Specify an image filename ending in .bin");
     }
     omp_set_dynamic(0);
+    #ifdef _WIN32
+    initialize_benchmark_clock();
+    #endif
     if (!benchmark(&options)) {
         fputs("Outputs differ. Inspect mismatches.csv and metrics.csv.\n", stderr);
         return 2;

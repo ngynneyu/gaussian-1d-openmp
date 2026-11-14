@@ -1,4 +1,5 @@
 /data/processed/
 /data/processed_raw_names/
 /.venv/
+/.venv-windows/
 __pycache__/
