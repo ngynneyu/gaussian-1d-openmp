@@ -43,7 +43,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("sequential", type=Path)
     parser.add_argument("openmp", type=Path)
-    parser.add_argument("--threads", nargs="+", type=int, default=(1, 2, 4, 8))
+    parser.add_argument("--threads", nargs="+", type=int, default=(2, 4, 8, 16, 20))
     args = parser.parse_args()
     sequential = args.sequential.resolve()
     openmp = args.openmp.resolve()

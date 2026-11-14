@@ -8,7 +8,9 @@ Cấu hình mặc định dùng kernel **19 × 19, σ = 3**, với 19 hệ số 
 
 Bản OpenMP chia các hàng bằng `schedule(static)` trong cùng một vùng song song. Hàng rào đồng bộ sau lượt ngang bảo đảm lượt dọc đọc được cả các hàng trung gian do luồng khác xử lý. Benchmark đo Sequential và OpenMP với **2, 4, 8, 16, 20 luồng**. Chương trình cấp phát bộ đệm ngoài khoảng đo và tính thời gian cho cả hai lượt lọc. Mỗi cấu hình chạy một lần warm-up rồi đo 10 lần liên tiếp để lấy median. Cấu hình bắt đầu thay đổi sau mỗi ảnh. `run_config.txt` ghi số CPU logic mà OpenMP thấy lúc chạy.
 
-`src/` chứa thuật toán và mã benchmark C++, `scripts/` xử lý kết quả, còn `tests/` chứa bộ kiểm thử. Các lệnh build, chạy thử và benchmark nằm ngay trong thư mục này.
+`src/` chứa mã C11. `gaussian.c` tính kernel và lọc tuần tự, `gaussian_omp.c` chia hàng cho các luồng, còn `benchmark.c` đo thời gian bằng `omp_get_wtime()`. `scripts/` xử lý kết quả và `tests/` chứa bộ kiểm thử.
+
+Trên Windows, có thể biên dịch từ thư mục gốc bằng `.\gaussian_1d\build_gcc.ps1` nếu `gcc.exe` hỗ trợ OpenMP và đã có trong `PATH`.
 
 ## Chạy trong Ubuntu WSL2
 

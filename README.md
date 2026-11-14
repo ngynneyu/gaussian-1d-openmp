@@ -1,4 +1,4 @@
-# Gaussian Blur 1D với C++ và OpenMP
+# Gaussian Blur 1D với C và OpenMP
 
 Chương trình lọc ảnh xám theo chiều ngang rồi chiều dọc, mặc định kernel **19 × 19, σ = 3** và xử lý biên bằng replicate padding. Benchmark so sánh Sequential với OpenMP **2, 4, 8, 16 và 20 luồng**. [Chi tiết triển khai](gaussian_1d/README.md)
 
@@ -43,4 +43,4 @@ Mỗi lượt có một thư mục mới dưới `results/full/` của bản tư
 | `run_config.txt` | Kernel, sigma, kích thước, số luồng và môi trường OpenMP. |
 | `images/`, `previews/` | Ảnh đã lọc theo số luồng và ảnh đối chiếu trước/sau. |
 
-Mỗi cấu hình chạy một lần warm-up rồi đo 10 lần liên tiếp. Cấu hình bắt đầu thay đổi sau mỗi ảnh. Việc đọc ảnh, ghi tệp và tạo preview diễn ra ngoài phạm vi tính giờ. Dữ liệu tiền xử lý, thư mục build và kết quả nằm trong `.gitignore`.
+Mỗi cấu hình chạy một lần warm-up rồi đo 10 lần liên tiếp bằng `omp_get_wtime()`. Cấu hình bắt đầu thay đổi sau mỗi ảnh. Việc đọc ảnh, ghi tệp và tạo preview diễn ra ngoài phạm vi tính giờ. Dữ liệu tiền xử lý, thư mục build và kết quả nằm trong `.gitignore`.

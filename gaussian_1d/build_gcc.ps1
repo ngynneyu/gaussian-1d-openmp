@@ -1,26 +1,22 @@
-param([string]$Compiler = 'g++')
+param([string]$Compiler = 'gcc')
 
 $ErrorActionPreference = 'Stop'
 $compilerPath = (Get-Command $Compiler -CommandType Application -ErrorAction Stop).Source
 Push-Location $PSScriptRoot
 try {
     New-Item -ItemType Directory -Force build | Out-Null
-    $common = @('-std=c++17', '-O3', '-DNDEBUG', '-ffp-contract=off', '-Wall', '-Wextra', '-Wpedantic')
-    $ompSources = @('src/openmp_runtime.cpp', 'src/gaussian_omp.cpp')
+    $common = @('-std=c11', '-D_POSIX_C_SOURCE=200809L', '-O3', '-DNDEBUG', '-ffp-contract=off', '-Wall', '-Wextra', '-Wpedantic')
 
-    & $compilerPath @common -c src/gaussian_1d.cpp -o build/gaussian_1d_win.o
+    & $compilerPath @common -c src/gaussian.c -o build/gaussian_win.o
     if ($LASTEXITCODE -ne 0) { throw 'Convolution object build failed' }
 
-    & $compilerPath @common -c src/gaussian_seq.cpp -o build/gaussian_seq_win.o
-    if ($LASTEXITCODE -ne 0) { throw 'Sequential object build failed' }
-
-    & $compilerPath @common src/filter_main.cpp src/image_io.cpp build/gaussian_1d_win.o build/gaussian_seq_win.o -o build/gaussian_seq.exe
+    & $compilerPath @common src/filter_main.c src/image_io.c build/gaussian_win.o -o build/gaussian_seq.exe -lm
     if ($LASTEXITCODE -ne 0) { throw 'Sequential build failed' }
 
-    & $compilerPath @common -DGAUSSIAN_USE_OPENMP -fopenmp src/filter_main.cpp src/image_io.cpp @ompSources build/gaussian_1d_win.o -o build/gaussian_omp.exe
+    & $compilerPath @common -DGAUSSIAN_USE_OPENMP -fopenmp src/filter_main.c src/image_io.c src/gaussian_omp.c build/gaussian_win.o -o build/gaussian_omp.exe -lm
     if ($LASTEXITCODE -ne 0) { throw 'OpenMP build failed' }
 
-    & $compilerPath @common -fopenmp src/benchmark.cpp src/image_io.cpp @ompSources build/gaussian_1d_win.o build/gaussian_seq_win.o -o build/gaussian_bench.exe
+    & $compilerPath @common -fopenmp src/benchmark.c src/image_io.c src/gaussian_omp.c build/gaussian_win.o -o build/gaussian_bench.exe -lm
     if ($LASTEXITCODE -ne 0) { throw 'Benchmark build failed' }
 } finally {
     Pop-Location
