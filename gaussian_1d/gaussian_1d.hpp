@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../gaussian/gaussian.hpp"
+#include "gaussian.hpp"
 
 namespace gaussian::separable {
 
