@@ -2,7 +2,7 @@
 
 #include <omp.h>
 
-const int openmp_thread_counts[OPENMP_CONFIGS] = {2, 4, 8, 16, 20};
+const int openmp_thread_counts[OPENMP_CONFIGS] = {2, 4, 8, 12, 16};
 
 int blur_openmp(const Image *input, const Kernel *kernel, double *intermediate,
                 uint8_t *output, int threads) {

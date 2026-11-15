@@ -3,12 +3,17 @@
 
 import argparse
 import csv
+import json
 from math import isfinite
 from pathlib import Path
 from statistics import median
 
+if __package__:
+    from .run import THREADS
+else:
+    from run import THREADS
+
 SIZES = (512, 1024, 2048)
-THREADS = (4, 8, 12, 16, 20)
 ALGORITHMS = ("Sobel", "Gaussian", "Laplacian")
 
 
@@ -20,10 +25,14 @@ def write_rows(path, rows):
 
 
 def summarize(directory):
+    config_path = directory / "run_config.json"
+    threads_used = THREADS
+    if config_path.is_file():
+        threads_used = json.loads(config_path.read_text(encoding="utf-8"))["threads"]
     with (directory / "timings.csv").open(encoding="utf-8", newline="") as source:
         reader = csv.DictReader(source)
         timings = {(name, size, threads): {} for name in ALGORITHMS
-                   for size in SIZES for threads in THREADS}
+                   for size in SIZES for threads in threads_used}
         seq_samples = {}
         for row in reader:
             name, size, threads = row["algorithm"], int(row["size"]), int(row["threads"])

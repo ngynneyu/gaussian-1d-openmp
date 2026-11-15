@@ -1,1 +1,2 @@
-/results/benchmark/samples/*.bin binary
+/results/**/samples/*.bin binary
+/run_all.sh text eol=lf

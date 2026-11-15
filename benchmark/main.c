@@ -1,4 +1,5 @@
 #include "gaussian/gaussian_adapter.h"
+#include "gaussian/gaussian.h"
 #include "laplacian/laplacian_adapter.h"
 #include "sobel/sobel.h"
 
@@ -22,9 +23,8 @@
 
 enum { IMAGE_COUNT = 20, REPEATS = 10, PATH_CAPACITY = 4096 };
 static const int sizes[] = {512, 1024, 2048};
-static const int thread_counts[] = {4, 8, 12, 16, 20};
 enum { SIZE_COUNT = sizeof sizes / sizeof sizes[0],
-       THREAD_CONFIGS = sizeof thread_counts / sizeof thread_counts[0] };
+       THREAD_CONFIGS = OPENMP_CONFIGS };
 
 typedef enum { SOBEL, GAUSSIAN, LAPLACIAN, FILTER_COUNT } Filter;
 static const char* const filter_names[] = {"Sobel", "Gaussian", "Laplacian"};
@@ -123,10 +123,7 @@ static float* load_image(const char* file, size_t count) {
     return pixels;
 }
 
-static void save_sample(const char* directory, const char* filter, const char* version,
-                        const void* pixels, size_t pixel_bytes, size_t count) {
-    char path[PATH_CAPACITY];
-    format_path(path, "%s/%s_%s.bin", directory, filter, version);
+static void save_pixels(const char* path, const void* pixels, size_t pixel_bytes, size_t count) {
     FILE* file = fopen(path, "wb");
     if (!file) {
         die("Cannot open %s: %s", path, strerror(errno));
@@ -136,6 +133,13 @@ static void save_sample(const char* directory, const char* filter, const char* v
     if (written != count || status != 0) {
         die("Cannot write %s", path);
     }
+}
+
+static void save_sample(const char* directory, const char* filter, const char* version,
+                        const void* pixels, size_t pixel_bytes, size_t count) {
+    char path[PATH_CAPACITY];
+    format_path(path, "%s/%s_%s.bin", directory, filter, version);
+    save_pixels(path, pixels, pixel_bytes, count);
 }
 
 static int apply_filter(const ImageJob* job, void* output, int threads) {
@@ -209,8 +213,8 @@ static void write_times(FILE* output, const double times[REPEATS]) {
     }
 }
 
-static bool benchmark_image(FILE* output, const char* samples_dir, const ImageJob* job,
-                            int image_index, size_t count) {
+static bool benchmark_image(FILE* output, const char* samples_dir, const char* png_source_dir,
+                            const ImageJob* job, int image_index, size_t count) {
     const char* name = filter_names[job->filter];
     const bool byte_output = job->filter == GAUSSIAN;
     const size_t pixel_bytes = byte_output ? sizeof(uint8_t) : sizeof(float);
@@ -229,7 +233,7 @@ static bool benchmark_image(FILE* output, const char* samples_dir, const ImageJo
 
     bool identical = true;
     for (int offset = 0; offset < THREAD_CONFIGS; ++offset) {
-        const int threads = thread_counts[(image_index - 1 + offset) % THREAD_CONFIGS];
+        const int threads = openmp_thread_counts[(image_index - 1 + offset) % THREAD_CONFIGS];
         double parallel[REPEATS];
         measure(job, actual, threads, parallel);
         const ErrorMetrics errors = compare_outputs(reference, actual, count, byte_output);
@@ -239,9 +243,15 @@ static bool benchmark_image(FILE* output, const char* samples_dir, const ImageJo
         write_times(output, baseline);
         write_times(output, parallel);
         fputc('\n', output);
-        if (example && threads == thread_counts[0]) {
+        if (example && threads == 4) {
             save_sample(samples_dir, name, "omp4", actual, pixel_bytes, count);
         }
+    }
+
+    if (png_source_dir && identical) {
+        char path[PATH_CAPACITY];
+        format_path(path, "%s/%s_%d_image_%02d.bin", png_source_dir, name, job->size, image_index);
+        save_pixels(path, reference, pixel_bytes, count);
     }
 
     free(actual);
@@ -252,7 +262,7 @@ static bool benchmark_image(FILE* output, const char* samples_dir, const ImageJo
 static void check_teams(void) {
     omp_set_dynamic(0);
     for (int index = 0; index < THREAD_CONFIGS; ++index) {
-        const int threads = thread_counts[index];
+        const int threads = openmp_thread_counts[index];
         int actual = 0;
         #pragma omp parallel num_threads(threads)
         {
@@ -268,9 +278,10 @@ static void check_teams(void) {
 int main(int argc, char** argv) {
     _Static_assert(sizeof(float) == 4 && FLT_RADIX == 2 && FLT_MANT_DIG == 24 && FLT_MAX_EXP == 128,
                    "The dataset uses IEEE 754 float32");
-    if (argc != 3) {
-        die("Usage: image_benchmark PROCESSED_DIR OUTPUT_DIR");
+    if (argc != 3 && argc != 4) {
+        die("Usage: image_benchmark PROCESSED_DIR OUTPUT_DIR [PNG_SOURCE_DIR]");
     }
+    const char* png_source_dir = argc == 4 ? argv[3] : NULL;
     const unsigned int endian_probe = 1;
     if (*(const unsigned char*)&endian_probe != 1) {
         die("This benchmark requires little-endian float32");
@@ -300,6 +311,8 @@ int main(int argc, char** argv) {
     #endif
     check_teams();
     printf("OpenMP logical CPUs: %d\n", omp_get_num_procs());
+    printf("Gaussian kernel: %dx%d, sigma: %g\n",
+           DEFAULT_KERNEL_SIZE, DEFAULT_KERNEL_SIZE, DEFAULT_SIGMA);
     fflush(stdout);
     bool all_identical = true;
     for (int filter = 0; filter < FILTER_COUNT; ++filter) {
@@ -312,7 +325,8 @@ int main(int argc, char** argv) {
                 if (filter == GAUSSIAN) {
                     job.gaussian = gaussian_create(job.pixels, size);
                 }
-                const bool identical = benchmark_image(output, samples_dir, &job, image, count);
+                const bool identical = benchmark_image(output, samples_dir, png_source_dir,
+                                                       &job, image, count);
                 all_identical = all_identical && identical;
                 if (job.gaussian) {
                     gaussian_destroy(job.gaussian);

@@ -1,11 +1,11 @@
 {
-  "started": "2026-11-15T16:56:26+07:00",
-  "cpu": "12th Gen Intel(R) Core(TM) i7-1255U",
-  "logical_processors": 12,
-  "platform": "Windows-11-10.0.26200-SP0",
-  "c_compiler": "gcc.exe (GCC) 16.2.0",
+  "started": "2026-11-15T20:13:18+07:00",
+  "cpu": "AMD Ryzen AI 7 H 450 w/ Radeon 860M",
+  "logical_processors": 16,
+  "platform": "Linux-6.18.33.2-microsoft-standard-WSL2-x86_64-with-glibc2.43",
+  "c_compiler": "gcc (Ubuntu 15.2.0-16ubuntu1) 15.2.0",
   "language": "C11",
-  "timer": "QueryPerformanceCounter",
+  "timer": "omp_get_wtime",
   "flags": [
     "-std=gnu11",
     "-O3",
@@ -15,18 +15,18 @@
     "-Wextra"
   ],
   "threads": [
+    2,
     4,
     8,
     12,
-    16,
-    20
+    16
   ],
   "warmup": 1,
   "repeats": 10,
   "environment": {
     "OMP_DYNAMIC": "FALSE",
     "OMP_WAIT_POLICY": "PASSIVE",
-    "OMP_THREAD_LIMIT": "20",
+    "OMP_THREAD_LIMIT": "16",
     "OMP_PROC_BIND": "FALSE",
     "GOMP_SPINCOUNT": "0"
   },
@@ -41,5 +41,5 @@
       "91e2ed2ac05a56f2dc8bc258f60028242777b977"
     ]
   },
-  "wall_seconds": 97.7
+  "wall_seconds": 152.36
 }

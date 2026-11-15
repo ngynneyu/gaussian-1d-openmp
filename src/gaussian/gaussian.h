@@ -5,8 +5,8 @@
 #include <stdint.h>
 #include <stdio.h>
 
-enum { DEFAULT_KERNEL_SIZE = 19, OPENMP_CONFIGS = 5 };
-#define DEFAULT_SIGMA 3.0
+enum { DEFAULT_KERNEL_SIZE = 13, OPENMP_CONFIGS = 5 };
+#define DEFAULT_SIGMA 2.0
 
 extern const int openmp_thread_counts[OPENMP_CONFIGS];
 
