@@ -17,10 +17,6 @@ PINS = {
     "laplacian": ("vietquang8071/ttss", "91e2ed2ac05a56f2dc8bc258f60028242777b977"),
 }
 GAUSSIAN_UNITS = ("gaussian.c", "gaussian_omp.c", "image_io.c")
-UPSTREAM_FILES = {
-    "gaussian": ("gaussian_1d/src", (*GAUSSIAN_UNITS, "gaussian.h")),
-    "laplacian": ("laplacian_openmp", ("laplacian_benchmark.c",)),
-}
 FLAGS = ["-O3", "-fopenmp", "-ffp-contract=off", "-Wall", "-Wextra"]
 
 
@@ -28,35 +24,13 @@ def run(*args, **kwargs):
     return subprocess.run(args, cwd=ROOT, check=True, **kwargs)
 
 
-def prepare_upstream_sources():
-    for name, (repo, commit) in PINS.items():
-        cache = Path(".bench-cache") / name
-        if not cache.exists():
-            run("git", "clone", "--filter=blob:none", "--no-checkout",
-                f"https://github.com/{repo}.git", str(cache))
-
-        source_dir, files = UPSTREAM_FILES[name]
-        local_dir = Path("src") / name / "upstream"
-        local_dir.mkdir(parents=True, exist_ok=True)
-        for filename in files:
-            content = run("git", "-C", str(cache), "show", f"{commit}:{source_dir}/{filename}",
-                          stdout=subprocess.PIPE).stdout
-            local_file = local_dir / filename
-            if local_file.exists():
-                if local_file.read_bytes() != content:
-                    raise SystemExit(f"{local_file} differs from {commit}. Back up your edits before replacing it.")
-            else:
-                local_file.write_bytes(content)
-
-
 def build(cc, cxx):
-    prepare_upstream_sources()
     gaussian = Path("src/gaussian")
     laplacian = Path("src/laplacian")
     build_dir = Path(".bench-cache/build")
     build_dir.mkdir(parents=True, exist_ok=True)
     objects = []
-    units = [gaussian / "upstream" / name for name in GAUSSIAN_UNITS]
+    units = [gaussian / name for name in GAUSSIAN_UNITS]
     units += [gaussian / "gaussian_adapter.c", laplacian / "laplacian_adapter.c"]
     for source in units:
         obj = str(build_dir / f"{source.stem}.o")

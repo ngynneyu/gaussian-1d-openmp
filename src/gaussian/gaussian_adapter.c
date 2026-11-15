@@ -1,5 +1,5 @@
 #include "gaussian_adapter.h"
-#include "upstream/gaussian.h"
+#include "gaussian.h"
 
 #include <stdlib.h>
 

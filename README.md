@@ -22,11 +22,11 @@ Sobel dùng kernel 3×3 và tính biên độ gradient `sqrt(Gx² + Gy²)` kiể
 - Gaussian tách 1D dùng kernel `19×19`, `σ = 3`, replicate padding và đầu ra `uint8`. [Mã Gaussian của Người 1](https://github.com/ngynneyu/gaussian-1d-openmp/tree/2f639af25dd36171978e106c9f467e8a4263101d)
 - Laplacian 4 lân cận dùng zero padding và đầu ra `float32` có dấu. [Mã Laplacian của Người 3](https://github.com/vietquang8071/ttss/tree/91e2ed2ac05a56f2dc8bc258f60028242777b977)
 
-`benchmark/run.py` lấy đúng các tệp nguồn từ hai commit trên và đặt vào `upstream/` của từng thuật toán. Git chỉ theo dõi mã của phần tích hợp. Các repo dùng để lấy mã và các tệp biên dịch nằm trong `.bench-cache/`.
+Các tệp nguồn Gaussian và Laplacian từ hai commit trên nằm trực tiếp trong `src/gaussian/` và `src/laplacian/`. `benchmark/run.py` biên dịch các tệp có sẵn trong repo và lưu bản build vào `.bench-cache/build/`.
 
 ## Chạy lại
 
-Cần Git, Python 3 và GCC/G++ có hỗ trợ OpenMP. Chạy các lệnh từ thư mục gốc. Nếu đã có đủ `image_01.bin` đến `image_20.bin` ở mỗi thư mục kích thước trong `data/processed/`, chạy thẳng hai lệnh benchmark. Mỗi lần chạy dùng một thư mục `--out` mới.
+Cần Python 3 và GCC/G++ có hỗ trợ OpenMP. Chạy các lệnh từ thư mục gốc. Nếu đã có đủ `image_01.bin` đến `image_20.bin` ở mỗi thư mục kích thước trong `data/processed/`, chạy thẳng hai lệnh benchmark. Mỗi lần chạy dùng một thư mục `--out` mới.
 
 ```sh
 python benchmark/run.py --out results/run-02
