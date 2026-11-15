@@ -1,5 +1,6 @@
-#include "../sobel.hpp"
-#include "teammate_filters.h"
+#include "gaussian/gaussian_adapter.h"
+#include "laplacian/laplacian_adapter.h"
+#include "sobel/sobel.hpp"
 
 #include <algorithm>
 #include <array>
@@ -140,7 +141,8 @@ int main(int argc, char** argv) try {
         throw std::runtime_error("This benchmark requires little-endian float32");
     }
     const fs::path dataset = argv[1], out_dir = argv[2];
-    fs::create_directories(out_dir);
+    const fs::path samples_dir = out_dir / "samples";
+    fs::create_directories(samples_dir);
     std::ofstream output(out_dir / "timings.csv");
     output.exceptions(std::ios::badbit | std::ios::failbit);
     output << std::setprecision(12) << "algorithm,size,image,threads,max_abs_error,rmse";
@@ -161,7 +163,7 @@ int main(int argc, char** argv) try {
                 auto pixels = load(dataset / std::to_string(size) / (image + ".bin"), size);
                 bool identical;
                 if (filter == "Sobel") {
-                    identical = benchmark_image<float>(output, out_dir, filter, image, size, index,
+                    identical = benchmark_image<float>(output, samples_dir, filter, image, size, index,
                         [&](float* dst) { sobel_seq(pixels.data(), dst, size, size); },
                         [&](float* dst, int threads) {
                             sobel_omp(pixels.data(), dst, size, size, threads);
@@ -170,11 +172,11 @@ int main(int argc, char** argv) try {
                 } else if (filter == "Gaussian") {
                     std::unique_ptr<GaussianState, decltype(&gaussian_destroy)> state(
                         gaussian_create(pixels.data(), size), gaussian_destroy);
-                    identical = benchmark_image<uint8_t>(output, out_dir, filter, image, size, index,
+                    identical = benchmark_image<uint8_t>(output, samples_dir, filter, image, size, index,
                         [&](uint8_t* dst) { gaussian_seq(state.get(), dst); },
                         [&](uint8_t* dst, int threads) { return gaussian_omp(state.get(), dst, threads); });
                 } else {
-                    identical = benchmark_image<float>(output, out_dir, filter, image, size, index,
+                    identical = benchmark_image<float>(output, samples_dir, filter, image, size, index,
                         [&](float* dst) { laplacian_seq(pixels.data(), dst, size); },
                         [&](float* dst, int threads) {
                             laplacian_omp(pixels.data(), dst, size, threads);

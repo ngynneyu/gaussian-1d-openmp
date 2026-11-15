@@ -1,8 +1,8 @@
-#include "teammate_filters.h"
+#include "laplacian_adapter.h"
 
 /* The upstream kernels are static. Include them in this translation unit. */
 #define main upstream_laplacian_main
-#include "laplacian_benchmark.c"
+#include "upstream/laplacian_benchmark.c"
 #undef main
 
 void laplacian_seq(const float* input, float* output, int size) {

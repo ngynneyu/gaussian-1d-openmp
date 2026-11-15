@@ -1,6 +1,7 @@
 /.bench-cache/
 /data/
 /dataset-source/
-/outputs/
 /results/
+/src/gaussian/upstream/
+/src/laplacian/upstream/
 __pycache__/

@@ -111,8 +111,8 @@ def preprocess(input_dir: Path, output_dir: Path, expected: int, preview: bool,
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--input", type=Path, default=Path("dataset/original"))
-    parser.add_argument("--output", type=Path, default=Path("dataset/processed"))
+    parser.add_argument("--input", type=Path, default=Path("data/raw"))
+    parser.add_argument("--output", type=Path, default=Path("data/processed"))
     parser.add_argument("--expected", type=int, default=20,
                         help="Expected number of originals; 0 disables this check")
     parser.add_argument("--preview", action="store_true",

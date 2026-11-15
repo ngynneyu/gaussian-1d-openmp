@@ -16,6 +16,11 @@ PINS = {
     "gaussian": ("ngynneyu/gaussian-1d-openmp", "2f639af25dd36171978e106c9f467e8a4263101d"),
     "laplacian": ("vietquang8071/ttss", "91e2ed2ac05a56f2dc8bc258f60028242777b977"),
 }
+GAUSSIAN_UNITS = ("gaussian.c", "gaussian_omp.c", "image_io.c")
+UPSTREAM_FILES = {
+    "gaussian": ("gaussian_1d/src", (*GAUSSIAN_UNITS, "gaussian.h")),
+    "laplacian": ("laplacian_openmp", ("laplacian_benchmark.c",)),
+}
 FLAGS = ["-O3", "-fopenmp", "-ffp-contract=off", "-Wall", "-Wextra"]
 
 
@@ -23,42 +28,43 @@ def run(*args, **kwargs):
     return subprocess.run(args, cwd=ROOT, check=True, **kwargs)
 
 
-def source_dirs():
+def prepare_upstream_sources():
     for name, (repo, commit) in PINS.items():
-        directory = Path(".bench-cache") / name
-        if not directory.exists():
+        cache = Path(".bench-cache") / name
+        if not cache.exists():
             run("git", "clone", "--filter=blob:none", "--no-checkout",
-                f"https://github.com/{repo}.git", str(directory))
-            run("git", "-C", str(directory), "sparse-checkout", "set", "--cone",
-                "gaussian_1d/src" if name == "gaussian" else "laplacian_openmp")
-            run("git", "-C", str(directory), "checkout", "--detach", commit)
-        head = run("git", "-C", str(directory), "rev-parse", "HEAD",
-                   capture_output=True, text=True).stdout.strip()
-        if head != commit:
-            raise SystemExit(f"{directory} must be checked out at {commit}, found {head}")
-        changes = run("git", "-C", str(directory), "status", "--porcelain", "--untracked-files=no",
-                      capture_output=True, text=True).stdout.strip()
-        if changes:
-            raise SystemExit(f"{directory} has local changes:\n{changes}")
-        yield directory
+                f"https://github.com/{repo}.git", str(cache))
+
+        source_dir, files = UPSTREAM_FILES[name]
+        local_dir = Path("src") / name / "upstream"
+        local_dir.mkdir(parents=True, exist_ok=True)
+        for filename in files:
+            content = run("git", "-C", str(cache), "show", f"{commit}:{source_dir}/{filename}",
+                          stdout=subprocess.PIPE).stdout
+            local_file = local_dir / filename
+            if local_file.exists():
+                if local_file.read_bytes() != content:
+                    raise SystemExit(f"{local_file} differs from {commit}. Back up your edits before replacing it.")
+            else:
+                local_file.write_bytes(content)
 
 
 def build(cc, cxx):
-    gaussian, laplacian = source_dirs()
-    gsrc = gaussian / "gaussian_1d" / "src"
-    lsrc = laplacian / "laplacian_openmp"
+    prepare_upstream_sources()
+    gaussian = Path("src/gaussian")
+    laplacian = Path("src/laplacian")
     build_dir = Path(".bench-cache/build")
     build_dir.mkdir(parents=True, exist_ok=True)
     objects = []
-    units = [gsrc / name for name in ("gaussian.c", "gaussian_omp.c", "image_io.c")]
-    units += [Path("scripts/gaussian_adapter.c"), Path("scripts/laplacian_adapter.c")]
+    units = [gaussian / "upstream" / name for name in GAUSSIAN_UNITS]
+    units += [gaussian / "gaussian_adapter.c", laplacian / "laplacian_adapter.c"]
     for source in units:
         obj = str(build_dir / f"{source.stem}.o")
-        run(cc, "-std=gnu11", *FLAGS, "-I", str(gsrc), "-I", str(lsrc), "-c", str(source), "-o", obj)
+        run(cc, "-std=gnu11", *FLAGS, "-c", str(source), "-o", obj)
         objects.append(obj)
     exe = build_dir / ("image_benchmark.exe" if os.name == "nt" else "image_benchmark")
-    run(cxx, "-std=c++17", *FLAGS, "sobel_seq.cpp", "sobel_omp.cpp", "scripts/benchmark.cpp",
-        *objects, "-o", str(exe))
+    run(cxx, "-std=c++17", *FLAGS, "-I", "src", "src/sobel/sobel_seq.cpp",
+        "src/sobel/sobel_omp.cpp", "benchmark/main.cpp", *objects, "-o", str(exe))
     return exe
 
 

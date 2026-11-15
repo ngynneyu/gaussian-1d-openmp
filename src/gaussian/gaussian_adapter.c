@@ -1,5 +1,5 @@
-#include "teammate_filters.h"
-#include "gaussian.h"
+#include "gaussian_adapter.h"
+#include "upstream/gaussian.h"
 
 #include <stdlib.h>
 

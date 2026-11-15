@@ -1,31 +1,56 @@
 # Parallel Image Filtering with OpenMP
 
-Phần của Người 2 gồm `sobel_seq.cpp`, `sobel_omp.cpp` và `sobel.hpp`. Hai bản dùng cùng cặp kernel Sobel 3×3 và tính biên độ gradient `sqrt(Gx² + Gy²)` kiểu `float32`. Viền ngoài một pixel được đặt bằng 0. Bản OpenMP chia các hàng bằng `schedule(static)`.
+## Cấu trúc thư mục
 
-Chương trình đo dùng trực tiếp các hàm lọc Gaussian tách 1D (`19×19`, `σ = 3`, replicate padding, đầu ra `uint8`) và Laplacian 4 lân cận (zero padding, đầu ra `float32` có dấu) ở hai commit sau:
+```text
+data/
+├── raw/                  20 ảnh gốc
+└── processed/            Ảnh grayscale ở ba kích thước và metadata.csv
+src/
+├── gaussian/             Mã Gaussian và adapter cho benchmark
+├── sobel/                Sobel tuần tự, OpenMP và header dùng chung
+└── laplacian/            Mã Laplacian và adapter cho benchmark
+scripts/
+└── data/                 Script tiền xử lý và chương trình đọc ảnh .bin
+benchmark/                Biên dịch, đo và tổng hợp cả ba thuật toán
+results/
+└── benchmark/            Excel, CSV, cấu hình lần đo và samples/
+```
 
-- [Gaussian của Người 1](https://github.com/ngynneyu/gaussian-1d-openmp/tree/2f639af25dd36171978e106c9f467e8a4263101d)
-- [Laplacian của Người 3](https://github.com/vietquang8071/ttss/tree/91e2ed2ac05a56f2dc8bc258f60028242777b977)
+Sobel dùng kernel 3×3 và tính biên độ gradient `sqrt(Gx² + Gy²)` kiểu `float32`. Viền ngoài một pixel bằng 0. Bản OpenMP chia hàng bằng `schedule(static)`.
+
+- Gaussian tách 1D dùng kernel `19×19`, `σ = 3`, replicate padding và đầu ra `uint8`. [Mã Gaussian của Người 1](https://github.com/ngynneyu/gaussian-1d-openmp/tree/2f639af25dd36171978e106c9f467e8a4263101d)
+- Laplacian 4 lân cận dùng zero padding và đầu ra `float32` có dấu. [Mã Laplacian của Người 3](https://github.com/vietquang8071/ttss/tree/91e2ed2ac05a56f2dc8bc258f60028242777b977)
+
+`benchmark/run.py` lấy đúng các tệp nguồn từ hai commit trên và đặt vào `upstream/` của từng thuật toán. Git chỉ theo dõi mã của phần tích hợp. Các repo dùng để lấy mã và các tệp biên dịch nằm trong `.bench-cache/`.
 
 ## Chạy lại
 
-Cần Git, Python 3 và GCC/G++ có hỗ trợ OpenMP. Chạy các lệnh từ thư mục gốc. Nếu đã có `data/processed/{512,1024,2048}/image_01.bin` đến `image_20.bin`, chạy thẳng hai lệnh benchmark. Mỗi lần chạy dùng một thư mục `--out` mới.
+Cần Git, Python 3 và GCC/G++ có hỗ trợ OpenMP. Chạy các lệnh từ thư mục gốc. Nếu đã có đủ `image_01.bin` đến `image_20.bin` ở mỗi thư mục kích thước trong `data/processed/`, chạy thẳng hai lệnh benchmark. Mỗi lần chạy dùng một thư mục `--out` mới.
 
 ```sh
-python scripts/run_benchmark.py --out results/benchmark
-python scripts/summarize_benchmark.py results/benchmark
+python benchmark/run.py --out results/run-02
+python benchmark/summarize.py results/run-02
 ```
 
-`run_benchmark.py` tự lấy các tệp nguồn của hai repo tại đúng commit. Trên Windows có thể truyền đường dẫn tuyệt đối đến hai trình biên dịch bằng `--cc` và `--cxx`.
+Trên Windows có thể truyền đường dẫn tuyệt đối đến hai trình biên dịch bằng `--cc` và `--cxx`.
 
-Để tái tạo dataset, dùng 20 ảnh gốc từ `data/raw` trong repo Laplacian ở commit trên. Cài NumPy và Pillow cho bước này. `--numbered` đánh số theo thứ tự tên tệp. `metadata.csv` ghi tên ảnh gốc tương ứng.
+Để tạo ảnh đầu vào từ `data/raw/`, cài NumPy và Pillow rồi chạy lại bước tiền xử lý. `--numbered` đánh số theo thứ tự tên tệp. `metadata.csv` ghi tên ảnh gốc tương ứng.
 
 ```sh
 python -m pip install numpy Pillow
+python scripts/data/preprocess.py --numbered
+```
+
+Nếu clone mới và chưa có ảnh gốc, lấy dữ liệu của Người 3 rồi chỉ định `--input`.
+
+```sh
 git clone https://github.com/vietquang8071/ttss.git dataset-source
 git -C dataset-source checkout --detach 91e2ed2ac05a56f2dc8bc258f60028242777b977
-python scripts/preprocess.py --input dataset-source/data/raw --output data/processed --numbered
+python scripts/data/preprocess.py --input dataset-source/data/raw --numbered
 ```
+
+Để đọc thử ảnh `.bin`, biên dịch `scripts/data/read_image.c` bằng GCC rồi chạy chương trình từ thư mục gốc. Chương trình nhận đường dẫn ảnh và kích thước cạnh, mặc định dùng `data/processed/512/image_01.bin`.
 
 ## Phương pháp đo
 
@@ -42,4 +67,4 @@ python scripts/preprocess.py --input dataset-source/data/raw --output data/proce
 | `timings.csv` | 10 thời gian tuần tự và 10 thời gian OpenMP cho từng cặp ảnh/cấu hình, kèm sai số pixel |
 | `metrics_per_image.csv` | 900 cặp so sánh với median, speedup, efficiency và correctness |
 | `summary.csv` | 45 dòng tổng hợp cho ba thuật toán |
-| `*_seq.bin`, `*_omp4.bin` | Đầu ra mẫu tuần tự và OpenMP 4 luồng của `image_01`, kích thước 512×512. Gaussian dùng `uint8`, Sobel và Laplacian dùng `float32` little-endian. |
+| `samples/*_seq.bin`, `samples/*_omp4.bin` | Đầu ra mẫu tuần tự và OpenMP 4 luồng của `image_01`, kích thước 512×512. Gaussian dùng `uint8`, Sobel và Laplacian dùng `float32` little-endian. |
