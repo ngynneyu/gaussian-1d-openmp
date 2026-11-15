@@ -64,7 +64,9 @@ python scripts/data/preprocess.py --input dataset-source/data/raw --numbered
 
 | Tệp | Nội dung |
 | --- | --- |
-| `timings.csv` | 10 thời gian tuần tự và 10 thời gian OpenMP cho từng cặp ảnh/cấu hình, kèm sai số pixel |
-| `metrics_per_image.csv` | 900 cặp so sánh với median, speedup, efficiency và correctness |
-| `summary.csv` | 45 dòng tổng hợp cho ba thuật toán |
-| `samples/*_seq.bin`, `samples/*_omp4.bin` | Đầu ra mẫu tuần tự và OpenMP 4 luồng của `image_01`, kích thước 512×512. Gaussian dùng `uint8`, Sobel và Laplacian dùng `float32` little-endian. |
+| [Excel](results/benchmark/Ket%20qua%20benchmark%20OpenMP.xlsx) | Bảng metrics và 9 biểu đồ cho cả ba thuật toán |
+| [summary.csv](results/benchmark/summary.csv) | 45 dòng tổng hợp cho ba thuật toán |
+| [metrics_per_image.csv](results/benchmark/metrics_per_image.csv) | 900 cặp so sánh với median, speedup, efficiency và correctness |
+| [timings.csv](results/benchmark/timings.csv) | 10 thời gian tuần tự và 10 thời gian OpenMP cho từng cặp ảnh/cấu hình, kèm sai số pixel |
+| [run_config.json](results/benchmark/run_config.json) | Thông tin máy, trình biên dịch, cấu hình OpenMP và SHA-256 của dữ liệu |
+| [samples/](results/benchmark/samples) | Đầu ra mẫu tuần tự và OpenMP 4 luồng của `image_01`, kích thước 512×512. Gaussian dùng `uint8`, Sobel và Laplacian dùng `float32` little-endian. |

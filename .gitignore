@@ -1,5 +1,6 @@
 /.bench-cache/
 /data/
 /dataset-source/
-/results/
+/results/*
+!/results/benchmark/
 __pycache__/
