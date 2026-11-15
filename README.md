@@ -38,7 +38,7 @@ Các tệp nguồn Gaussian và Laplacian từ hai commit trên nằm trực ti�
 
 ## Chạy lại
 
-Cần Python 3 và GCC hỗ trợ C11 và OpenMP. Nếu đã có đủ `image_01.bin` đến `image_20.bin` ở mỗi thư mục kích thước trong `data/processed/`, chạy script tương ứng từ thư mục gốc. Mỗi lần chạy tự biên dịch, đo cả ba bộ lọc và tổng hợp CSV trong một thư mục kết quả mới.
+Cần Python 3 và GCC hỗ trợ C11 và OpenMP. Repo có sẵn 60 ảnh đầu vào `.bin` trong [data/processed](data/processed), gồm 20 ảnh ở mỗi kích thước 512×512, 1024×1024 và 2048×2048. Chạy script tương ứng từ thư mục gốc sau khi clone. Mỗi lần chạy tự biên dịch, đo cả ba bộ lọc và tổng hợp CSV trong một thư mục kết quả mới.
 
 ### Chạy trên Windows và xuất PNG
 
@@ -80,22 +80,16 @@ Khi bật xuất PNG, mỗi lượt chạy thành công lưu 1.080 ảnh tại `
 
 Ảnh của từng mốc luồng được xuất sau khi OpenMP đã khớp từng pixel với bản tuần tự. Việc lưu tệp và mã hóa PNG nằm ngoài khoảng đo hàm lọc.
 
-### Chuẩn bị dữ liệu
+### Tạo lại dữ liệu đầu vào
 
-Để tạo ảnh đầu vào từ `data/raw/`, cài NumPy và Pillow rồi chạy lại bước tiền xử lý. `--numbered` đánh số theo thứ tự tên tệp. `metadata.csv` ghi tên ảnh gốc tương ứng.
+Để tạo một bản dữ liệu riêng từ `data/raw/`, cài NumPy và Pillow rồi chạy bước tiền xử lý vào thư mục mới. `--numbered` đánh số theo thứ tự tên tệp. `metadata.csv` ghi tên ảnh gốc tương ứng.
 
 ```sh
 python -m pip install numpy Pillow
-python scripts/data/preprocess.py --numbered
+python scripts/data/preprocess.py --numbered --output data/processed_new
 ```
 
-Nếu clone mới và chưa có ảnh gốc, lấy dữ liệu của Người 3 rồi chỉ định `--input`.
-
-```sh
-git clone https://github.com/vietquang8071/ttss.git dataset-source
-git -C dataset-source checkout --detach 91e2ed2ac05a56f2dc8bc258f60028242777b977
-python scripts/data/preprocess.py --input dataset-source/data/raw --numbered
-```
+Dùng `--input` để chọn thư mục ảnh gốc khác. Khi chạy `benchmark/run.py` trực tiếp, dùng `--dataset data/processed_new` để chọn bộ dữ liệu vừa tạo.
 
 Để đọc thử ảnh `.bin`, biên dịch `scripts/data/read_image.c` bằng GCC rồi chạy chương trình từ thư mục gốc. Chương trình nhận đường dẫn ảnh và kích thước cạnh, mặc định dùng `data/processed/512/image_01.bin`.
 

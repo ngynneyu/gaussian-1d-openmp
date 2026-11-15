@@ -1,2 +1,3 @@
 /results/**/samples/*.bin binary
+/data/processed/**/*.bin binary
 /run_all.sh text eol=lf

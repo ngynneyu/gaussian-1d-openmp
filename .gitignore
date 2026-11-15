@@ -1,6 +1,7 @@
 /.bench-cache/
 /data/*
 !/data/raw/
+!/data/processed/
 /dataset-source/
 /results/*
 !/results/benchmark/
