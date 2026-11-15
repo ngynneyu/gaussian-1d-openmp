@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Prepare grayscale float32 image datasets for C++/OpenMP convolution benchmarks."""
+"""Prepare grayscale float32 image datasets for C/OpenMP convolution benchmarks."""
 
 import argparse
 import csv
