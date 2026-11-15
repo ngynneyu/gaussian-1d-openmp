@@ -1,5 +1,7 @@
-/data/processed/
-/data/processed_raw_names/
-/.venv/
-/.venv-windows/
+/.bench-cache/
+/data/*
+!/data/raw/
+/dataset-source/
+/results/*
+!/results/benchmark/
 __pycache__/
