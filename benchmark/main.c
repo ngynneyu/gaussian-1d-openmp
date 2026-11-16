@@ -14,14 +14,13 @@
 #include <string.h>
 
 #ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
 #include <direct.h>
-#include <windows.h>
 #else
 #include <sys/stat.h>
 #endif
 
 enum { IMAGE_COUNT = 20, REPEATS = 10, PATH_CAPACITY = 4096 };
+enum { MIN_TICKS_PER_SAMPLE = 10, MAX_CALLS_PER_SAMPLE = 65536 };
 static const int sizes[] = {512, 1024, 2048};
 enum { SIZE_COUNT = sizeof sizes / sizeof sizes[0],
        THREAD_CONFIGS = OPENMP_CONFIGS };
@@ -49,34 +48,6 @@ static _Noreturn void die(const char* format, ...) {
     fputc('\n', stderr);
     exit(2);
 }
-
-#ifdef _WIN32
-typedef LONGLONG BenchmarkTick;
-static double milliseconds_per_tick;
-
-static void initialize_clock(void) {
-    LARGE_INTEGER frequency;
-    if (!QueryPerformanceFrequency(&frequency) || frequency.QuadPart <= 0) {
-        die("Cannot initialize the Windows performance counter");
-    }
-    milliseconds_per_tick = 1000.0 / frequency.QuadPart;
-}
-
-static BenchmarkTick timestamp(void) {
-    LARGE_INTEGER now;
-    if (!QueryPerformanceCounter(&now)) {
-        die("Cannot read the Windows performance counter");
-    }
-    return now.QuadPart;
-}
-#else
-typedef double BenchmarkTick;
-static const double milliseconds_per_tick = 1000.0;
-
-static BenchmarkTick timestamp(void) {
-    return omp_get_wtime();
-}
-#endif
 
 static void format_path(char path[PATH_CAPACITY], const char* format, ...) {
     va_list arguments;
@@ -174,13 +145,32 @@ static void measure(const ImageJob* job, void* output, int threads, double times
     if (apply_filter(job, output, threads) != threads) {
         die("OpenMP created an unexpected team size during warm-up");
     }
-    for (int run = 0; run < REPEATS; ++run) {
-        const BenchmarkTick start = timestamp();
-        const int actual = apply_filter(job, output, threads);
-        times[run] = (timestamp() - start) * milliseconds_per_tick;
-        if (actual != threads) {
+    const double tick_seconds = omp_get_wtick();
+    if (!isfinite(tick_seconds) || tick_seconds <= 0.0) {
+        die("Invalid OpenMP timer resolution");
+    }
+    // Allow for floating-point rounding when subtracting two clock readings.
+    const double minimum_seconds = (MIN_TICKS_PER_SAMPLE - 0.5) * tick_seconds;
+    int calls = 1;
+    for (int sample = 0; sample < REPEATS;) {
+        bool correct_team_size = true;
+        const double start = omp_get_wtime();
+        for (int call = 0; call < calls; ++call) {
+            correct_team_size &= apply_filter(job, output, threads) == threads;
+        }
+        const double elapsed = omp_get_wtime() - start;
+        if (!correct_team_size) {
             die("OpenMP created an unexpected team size during measurement");
         }
+        if (elapsed >= minimum_seconds) {
+            times[sample++] = (elapsed * 1000.0) / calls;
+            continue;
+        }
+        // Batch short calls so one sample spans multiple ticks even on coarse clocks.
+        if (calls == MAX_CALLS_PER_SAMPLE) {
+            die("OpenMP timer did not advance enough to measure a sample");
+        }
+        calls *= 2;
     }
 }
 
@@ -306,9 +296,6 @@ int main(int argc, char** argv) {
     }
     fputc('\n', output);
 
-    #ifdef _WIN32
-    initialize_clock();
-    #endif
     check_teams();
     printf("OpenMP logical CPUs: %d\n", omp_get_num_procs());
     printf("Gaussian kernel: %dx%d, sigma: %g\n",

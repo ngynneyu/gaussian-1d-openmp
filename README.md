@@ -1,5 +1,7 @@
 # Parallel Image Filtering in C with OpenMP
 
+So sánh phiên bản tuần tự và OpenMP của ba bộ lọc ảnh mức xám Gaussian, Sobel và Laplacian. Benchmark dùng `omp_get_wtime()` và xuất CSV để phân tích thời gian, hệ số tăng tốc, hiệu suất song song và sai số điểm ảnh.
+
 ## Liên kết GitHub
 
 | Mục | Repository |
@@ -20,11 +22,11 @@ src/
 └── laplacian/            Mã Laplacian và adapter cho benchmark
 scripts/
 └── data/                 Script tiền xử lý và chương trình đọc ảnh .bin
-benchmark/                Biên dịch, đo và tổng hợp cả ba thuật toán
+benchmark/                Biên dịch, đo, tổng hợp và vẽ biểu đồ
 results/
-├── benchmark/            Báo cáo và dữ liệu của lượt đo đã lưu
 ├── windows_.../          Kết quả từ PowerShell
-└── wsl_.../              Kết quả từ Ubuntu hoặc WSL2
+├── wsl_.../              Kết quả từ Ubuntu hoặc WSL2
+└── charts/               Biểu đồ PNG tạo từ kết quả đã đo
 run_all.ps1               Chạy toàn bộ trên Windows
 run_all.sh                Chạy toàn bộ trên Ubuntu hoặc WSL2
 ```
@@ -48,18 +50,18 @@ Mở PowerShell trong thư mục gốc của repo. Cài Pillow một lần vào 
 python -m pip install "Pillow>=10.3"
 ```
 
-Chạy benchmark trực tiếp trên Windows và xuất toàn bộ ảnh PNG.
+Chạy benchmark và xuất ảnh sau lọc dạng PNG. Tùy chọn `-ExecutionPolicy RemoteSigned` áp dụng cho phiên PowerShell chạy lệnh này.
 
 ```powershell
-.\run_all.ps1 -Images
+powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File .\run_all.ps1 -Images
 ```
 
-Khi chạy xong, terminal in đường dẫn `results\windows_...`. Mở `summary.csv` để xem bảng thời gian và `images\` để xem ảnh. Ví dụ, ảnh Gaussian 512×512 với OpenMP 4 luồng nằm ở `images\Gaussian\512\omp4\image_2.png`. Dùng `.\run_all.ps1` khi chỉ cần chạy benchmark và tổng hợp CSV.
+Khi chạy xong, dòng `Results:` in đường dẫn thư mục `results\windows_...`. Mở `summary.csv` để xem bảng thời gian và `images\` để xem ảnh sau lọc. Bỏ `-Images` nếu chỉ cần số liệu.
 
 Nếu GCC chưa có trong `PATH`, truyền đường dẫn đến `gcc.exe`. Dùng `-Python "C:\duong-dan\python.exe"` nếu cần chỉ định đúng bản Python đã cài Pillow.
 
 ```powershell
-.\run_all.ps1 -Images -Compiler "C:\duong-dan\gcc.exe"
+powershell.exe -NoProfile -ExecutionPolicy RemoteSigned -File .\run_all.ps1 -Images -Compiler "C:\duong-dan\gcc.exe"
 ```
 
 ### Chạy trên Ubuntu hoặc WSL2
@@ -74,11 +76,22 @@ Kết quả nằm trong `results/wsl_...`. Có thể chỉ định GCC bằng bi
 
 ### Đọc kết quả của lượt chạy
 
-Benchmark in `Gaussian kernel: 13x13, sigma: 2` khi bắt đầu. Thư mục của mỗi lượt chứa `summary.csv`, `metrics_per_image.csv`, `timings.csv`, `run_config.json` và ảnh mẫu `.bin`. Báo cáo Excel được xuất ở bước riêng.
+Benchmark in `Gaussian kernel: 13x13, sigma: 2` khi bắt đầu. Mỗi lượt tạo `run_config.json`, ba tệp CSV và ảnh mẫu `.bin` trong `samples/`.
 
 Khi bật xuất PNG, mỗi lượt chạy thành công lưu 1.080 ảnh tại `images/<bộ lọc>/<kích thước>/<seq hoặc ompN>/`. Tên PNG lấy từ tên ảnh gốc trong `data/processed/metadata.csv` khi ánh xạ duy nhất. Nếu thiếu ánh xạ, ảnh dùng mã `image_XX` của bộ dữ liệu. Ảnh PNG ở thang xám. Gaussian dùng trực tiếp dữ liệu 8 bit. Sobel và Laplacian lấy độ lớn, chia cho 4 và đưa về khoảng hiển thị 0–255.
 
 Ảnh của từng mốc luồng được xuất sau khi OpenMP đã khớp từng pixel với bản tuần tự. Việc lưu tệp và mã hóa PNG nằm ngoài khoảng đo hàm lọc.
+
+### Vẽ lại biểu đồ từ kết quả đã đo
+
+Cài Matplotlib rồi chạy từ thư mục gốc của repo:
+
+```sh
+python -m pip install matplotlib
+python benchmark/plot.py results/windows_20261116_152359_7285082 --out results/charts
+```
+
+Thay thư mục đầu vào bằng đường dẫn ở dòng `Results:` để vẽ cho một lượt đo khác. Script đọc `summary.csv` và `run_config.json`, rồi ghi 9 biểu đồ PNG vào `results/charts/<tên lượt đo>/`. Mỗi bộ lọc có biểu đồ thời gian, hệ số tăng tốc và hiệu suất song song. Mỗi đường tương ứng một kích thước ảnh. Mốc 1 trên biểu đồ thời gian biểu diễn bản tuần tự. Các lượt truyền trong cùng một lệnh dùng chung thang trục dọc cho từng bộ lọc và chỉ số.
 
 ### Tạo lại dữ liệu đầu vào
 
@@ -96,38 +109,33 @@ Dùng `--input` để chọn thư mục ảnh gốc khác. Khi chạy `benchmark
 ## Phương pháp đo
 
 - Dùng cùng 20 ảnh grayscale ở mỗi kích thước 512×512, 1024×1024 và 2048×2048. Mỗi ảnh gốc có hai chiều tối thiểu 2048 px.
-- Với mỗi ảnh và mỗi cấu hình, warm-up một lần rồi đo 10 lần, lấy median. Các cấu hình gồm bản tuần tự và OpenMP với 2, 4, 8, 12, 16 luồng. Thứ tự các mốc OpenMP xoay vòng theo ảnh.
-- Benchmark C11 dùng `QueryPerformanceCounter()` trên Windows và `omp_get_wtime()` trên các hệ điều hành khác. Thời gian đo gồm lời gọi hàm lọc và chi phí vùng OpenMP. Đọc ảnh, cấp phát, khởi tạo kernel, kiểm tra sai số và lưu kết quả nằm ngoài khoảng đo.
+- Với mỗi ảnh và mỗi cấu hình, warm-up một lần rồi lấy 10 mẫu thời gian để tính median. Các cấu hình gồm bản tuần tự và OpenMP với 2, 4, 8, 12, 16 luồng. Thứ tự các mốc OpenMP xoay vòng theo ảnh.
+- Benchmark C11 dùng `omp_get_wtime()` để đo cả bản tuần tự và bản OpenMP trên Windows và WSL2. Thời gian được lưu bằng mili giây. Khoảng đo gồm lời gọi hàm lọc và chi phí vùng OpenMP. Đọc ảnh, cấp phát, khởi tạo kernel, kiểm tra sai số và lưu kết quả nằm ngoài khoảng đo.
+- Nếu một lời gọi quá ngắn so với độ phân giải của bộ đếm, chương trình gộp nhiều lời gọi để mỗi mẫu kéo dài khoảng 10 nhịp đồng hồ trở lên. Thời gian trong `timings.csv` được quy về mili giây trên một lần lọc.
 - Bảng tổng hợp lấy median của 20 median theo ảnh cho từng cấu hình. `Speedup = T_seq / T_omp`, `Efficiency (%) = 100 × Speedup / P`. Max Absolute Error và RMSE được tính theo từng pixel, rồi lấy giá trị lớn nhất trên 20 ảnh ở mỗi dòng tổng hợp.
-- Lượt đo lưu tại `results/benchmark/` chạy trên Ubuntu qua WSL2, với AMD Ryzen AI 7 H 450, 16 CPU logic và GCC 15.2.0. Lượt đo đó dùng Gaussian `19×19` với `σ = 3`. `run_config.json` lưu cờ biên dịch, biến môi trường OpenMP và SHA-256 của bộ dữ liệu đã đo.
 
-## Môi trường thực nghiệm
+## Kết quả benchmark Windows
 
-Hai lượt dưới đây chạy trên cùng máy dùng **AMD Ryzen AI 7 H 450** với **16 CPU logic**. Cả hai dùng cùng bộ 60 ảnh grayscale, bản tuần tự và các mốc OpenMP **2, 4, 8, 12, 16 luồng**. Gaussian dùng kernel `13×13` với `σ = 2`. Mỗi ảnh và cấu hình có một lượt warm-up và 10 lượt đo.
+Lượt đo ngày **16/11/2026** chạy trên Windows 11 x64 (build 26300), CPU **AMD Ryzen AI 7 H 450** với 16 bộ xử lý logic và GCC 16.2.0 (w64devkit). Bộ đếm là `omp_get_wtime()` với cách lấy mẫu theo nhóm lời gọi mô tả ở trên.
 
-| Thành phần | Windows | Ubuntu WSL2 |
-| --- | --- | --- |
-| Hệ điều hành | Windows 11, build 26300, x64 | Ubuntu 26.04.1 LTS, kernel `6.18.33.2-microsoft-standard-WSL2`, x64 |
-| Trình biên dịch | GCC 16.2.0, w64devkit | GCC 15.2.0, Ubuntu |
-| Python và Pillow | Python 3.14.6, Pillow 13.0.0 | Python 3.14.4, Pillow 12.1.1 |
-| Bộ đếm thời gian | `QueryPerformanceCounter()` | `omp_get_wtime()` |
-| Tệp cấu hình | [run_config.json](results/windows_20261115_215609_5029443/run_config.json) | [run_config.json](results/wsl_20261115_204823_469249545/run_config.json) |
-| Kết quả | [CSV và PNG trên Windows](results/windows_20261115_215609_5029443/) | [CSV và PNG trên WSL2](results/wsl_20261115_204823_469249545/) |
+Với Gaussian, bảng dưới chọn cấu hình có trung vị thời gian OpenMP thấp nhất tại mỗi kích thước trong lượt đo này.
 
-Cờ biên dịch chung gồm `-std=gnu11 -O3 -fopenmp -ffp-contract=off -Wall -Wextra`. Cấu hình OpenMP của hai lượt đặt `OMP_DYNAMIC=FALSE`, `OMP_THREAD_LIMIT=16`, `OMP_WAIT_POLICY=PASSIVE`, `OMP_PROC_BIND=FALSE` và `GOMP_SPINCOUNT=0`.
+| Kích thước ảnh | Số luồng | Tuần tự (ms) | OpenMP (ms) | Hệ số tăng tốc |
+| --- | ---: | ---: | ---: | ---: |
+| 512×512 | 16 | 5,500 | 1,219 | 4,51× |
+| 1024×1024 | 12 | 22,750 | 5,000 | 4,55× |
+| 2048×2048 | 16 | 109,000 | 18,250 | 5,97× |
 
-## Tệp kết quả tham khảo
-
-Các liên kết dưới đây trỏ tới lượt đo WSL2 đã lưu trong `results/benchmark/`.
+Tất cả 900 cặp so sánh theo ảnh và số luồng của ba bộ lọc đều khớp từng điểm ảnh với bản tuần tự.
 
 | Tệp | Nội dung |
 | --- | --- |
-| [Excel](results/benchmark/Ket%20qua%20benchmark%20OpenMP.xlsx) | Bảng metrics và 9 biểu đồ cho cả ba thuật toán |
-| [summary.csv](results/benchmark/summary.csv) | 45 dòng tổng hợp cho ba thuật toán |
-| [metrics_per_image.csv](results/benchmark/metrics_per_image.csv) | 900 cặp so sánh với median, speedup, efficiency và correctness |
-| [timings.csv](results/benchmark/timings.csv) | 10 thời gian tuần tự và 10 thời gian OpenMP cho từng cặp ảnh/cấu hình, kèm sai số pixel |
-| [run_config.json](results/benchmark/run_config.json) | Thông tin máy, trình biên dịch, cấu hình OpenMP và SHA-256 của dữ liệu |
-| [samples/](results/benchmark/samples) | Đầu ra mẫu tuần tự và OpenMP 4 luồng của `image_01`, kích thước 512×512. Gaussian dùng `uint8`, Sobel và Laplacian dùng `float32` little-endian. |
+| [run_config.json](results/windows_20261116_152359_7285082/run_config.json) | Môi trường, cờ biên dịch, bộ đếm và mã băm dữ liệu. |
+| [summary.csv](results/windows_20261116_152359_7285082/summary.csv) | 45 dòng tổng hợp thời gian, hệ số tăng tốc, hiệu suất và sai số. |
+| [metrics_per_image.csv](results/windows_20261116_152359_7285082/metrics_per_image.csv) | 900 dòng kết quả theo từng ảnh và cấu hình. |
+| [timings.csv](results/windows_20261116_152359_7285082/timings.csv) | Các mẫu thời gian và sai số điểm ảnh dùng để tổng hợp. |
+
+[Lượt đo WSL2 ngày 15/11](results/wsl_20261115_204823_469249545/summary.csv) được lưu riêng, với mỗi mẫu đo một lời gọi hàm lọc.
 
 ## Xử lý WinError 4551
 

@@ -4,5 +4,10 @@
 !/data/processed/
 /dataset-source/
 /results/*
-!/results/benchmark/
+!/results/windows_20261116_152359_7285082/
+/results/windows_20261116_152359_7285082/*
+!/results/windows_20261116_152359_7285082/run_config.json
+!/results/windows_20261116_152359_7285082/summary.csv
+!/results/windows_20261116_152359_7285082/metrics_per_image.csv
+!/results/windows_20261116_152359_7285082/timings.csv
 __pycache__/
