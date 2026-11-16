@@ -32,9 +32,9 @@
   },
   "dataset_sha256": "be776f46edf4b600fefb9017fa340c91b35b37b09fab758a175b3f69f6994564",
   "sources": {
-    "gaussian": [
-      "ngynneyu/gaussian-1d-openmp",
-      "2f639af25dd36171978e106c9f467e8a4263101d"
+    "sobel": [
+      "nhungnt795/Parallel-Image-Filtering",
+      "1bbc4f05f057a7dbbb98dfe18840e43ee4b67178"
     ],
     "laplacian": [
       "vietquang8071/ttss",

@@ -15,7 +15,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[1]
 PINS = {
-    "gaussian": ("ngynneyu/parallel-image-filtering-openmp", "2f639af25dd36171978e106c9f467e8a4263101d"),
+    "sobel": ("nhungnt795/Parallel-Image-Filtering", "1bbc4f05f057a7dbbb98dfe18840e43ee4b67178"),
     "laplacian": ("vietquang8071/ttss", "91e2ed2ac05a56f2dc8bc258f60028242777b977"),
 }
 GAUSSIAN_UNITS = ("gaussian.c", "gaussian_omp.c")

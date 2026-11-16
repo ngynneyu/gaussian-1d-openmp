@@ -7,8 +7,8 @@ So sánh phiên bản tuần tự và OpenMP của ba bộ lọc ảnh mức xá
 | Mục | Repository |
 | --- | --- |
 | Nhóm | [ngynneyu/parallel-image-filtering-openmp](https://github.com/ngynneyu/parallel-image-filtering-openmp) |
-| Người 2 · Sobel | [nhungnt795/Parallel-Image-Filtering, nhánh sobel-openmp](https://github.com/nhungnt795/Parallel-Image-Filtering/tree/sobel-openmp) |
-| Người 3 · Laplacian và dữ liệu | [vietquang8071/ttss](https://github.com/vietquang8071/ttss) |
+| Người 2 · Sobel | [nhungnt795/Parallel-Image-Filtering, commit 1bbc4f0](https://github.com/nhungnt795/Parallel-Image-Filtering/tree/1bbc4f05f057a7dbbb98dfe18840e43ee4b67178) |
+| Người 3 · Laplacian và dữ liệu | [vietquang8071/ttss, commit 91e2ed2](https://github.com/vietquang8071/ttss/tree/91e2ed2ac05a56f2dc8bc258f60028242777b977) |
 
 ## Cấu trúc thư mục
 
@@ -34,10 +34,10 @@ run_all.sh                Chạy toàn bộ trên Ubuntu hoặc WSL2
 
 - Sobel dùng kernel 3×3 và tính biên độ gradient `sqrt(Gx² + Gy²)` kiểu `float32`. Viền ngoài một pixel bằng 0. Bản OpenMP chia hàng bằng `schedule(static)`. Mã Sobel nằm trong `sobel_seq.c`, `sobel_omp.c` và `sobel.h`.
 
-- Gaussian tách 1D mặc định dùng kernel `13×13`, `σ = 2`, replicate padding và đầu ra `uint8`. `gaussian.c` chứa kernel, bộ đệm và bản tuần tự, `gaussian_omp.c` chứa bản song song, còn `gaussian.h` khai báo giao diện. [Mã Gaussian của Người 1](https://github.com/ngynneyu/parallel-image-filtering-openmp/tree/2f639af25dd36171978e106c9f467e8a4263101d)
-- Laplacian 4 lân cận dùng zero padding và đầu ra `float32` có dấu. [Mã Laplacian của Người 3](https://github.com/vietquang8071/ttss/tree/91e2ed2ac05a56f2dc8bc258f60028242777b977)
+- Gaussian tách 1D mặc định dùng kernel `13×13`, `σ = 2`, replicate padding và đầu ra `uint8`. `gaussian.c` chứa kernel, bộ đệm và bản tuần tự, `gaussian_omp.c` chứa bản song song, còn `gaussian.h` khai báo giao diện.
+- Laplacian 4 lân cận dùng zero padding và đầu ra `float32` có dấu.
 
-Các tệp nguồn Gaussian và Laplacian từ hai commit trên nằm trực tiếp trong `src/gaussian/` và `src/laplacian/`. Danh sách luồng OpenMP trong hai bộ mã đã được đồng bộ với benchmark chung, và cấu hình Gaussian mặc định được đặt trong `src/gaussian/gaussian.h`. `benchmark/run.py` biên dịch các tệp có sẵn trong repo và lưu bản build vào `.bench-cache/build/`.
+Gaussian được duy trì trong `src/gaussian/` của repo nhóm. Benchmark ghi các commit nguồn của Sobel và Laplacian vào mục `sources` trong `run_config.json`. `benchmark/run.py` biên dịch mã có sẵn trong repo và lưu bản build vào `.bench-cache/build/`.
 
 ## Chạy lại
 
