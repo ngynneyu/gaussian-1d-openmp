@@ -18,7 +18,7 @@ data/
 ├── processed/            Ảnh grayscale dạng .bin và metadata.csv
 └── processed_png/        60 ảnh đầu vào dạng PNG
 src/
-├── gaussian/             Mã Gaussian và adapter cho benchmark
+├── gaussian/             Kernel, bản tuần tự và OpenMP của Gaussian
 ├── sobel/                Sobel tuần tự, OpenMP và header dùng chung
 └── laplacian/            Mã Laplacian và adapter cho benchmark
 scripts/
@@ -34,7 +34,7 @@ run_all.sh                Chạy toàn bộ trên Ubuntu hoặc WSL2
 
 - Sobel dùng kernel 3×3 và tính biên độ gradient `sqrt(Gx² + Gy²)` kiểu `float32`. Viền ngoài một pixel bằng 0. Bản OpenMP chia hàng bằng `schedule(static)`. Mã Sobel nằm trong `sobel_seq.c`, `sobel_omp.c` và `sobel.h`.
 
-- Gaussian tách 1D mặc định dùng kernel `13×13`, `σ = 2`, replicate padding và đầu ra `uint8`. [Mã Gaussian của Người 1](https://github.com/ngynneyu/parallel-image-filtering-openmp/tree/2f639af25dd36171978e106c9f467e8a4263101d)
+- Gaussian tách 1D mặc định dùng kernel `13×13`, `σ = 2`, replicate padding và đầu ra `uint8`. `gaussian.c` chứa kernel, bộ đệm và bản tuần tự, `gaussian_omp.c` chứa bản song song, còn `gaussian.h` khai báo giao diện. [Mã Gaussian của Người 1](https://github.com/ngynneyu/parallel-image-filtering-openmp/tree/2f639af25dd36171978e106c9f467e8a4263101d)
 - Laplacian 4 lân cận dùng zero padding và đầu ra `float32` có dấu. [Mã Laplacian của Người 3](https://github.com/vietquang8071/ttss/tree/91e2ed2ac05a56f2dc8bc258f60028242777b977)
 
 Các tệp nguồn Gaussian và Laplacian từ hai commit trên nằm trực tiếp trong `src/gaussian/` và `src/laplacian/`. Danh sách luồng OpenMP trong hai bộ mã đã được đồng bộ với benchmark chung, và cấu hình Gaussian mặc định được đặt trong `src/gaussian/gaussian.h`. `benchmark/run.py` biên dịch các tệp có sẵn trong repo và lưu bản build vào `.bench-cache/build/`.

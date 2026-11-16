@@ -1,4 +1,3 @@
-#include "gaussian/gaussian_adapter.h"
 #include "gaussian/gaussian.h"
 #include "laplacian/laplacian_adapter.h"
 #include "sobel/sobel.h"

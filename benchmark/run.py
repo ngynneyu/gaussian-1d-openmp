@@ -18,7 +18,7 @@ PINS = {
     "gaussian": ("ngynneyu/parallel-image-filtering-openmp", "2f639af25dd36171978e106c9f467e8a4263101d"),
     "laplacian": ("vietquang8071/ttss", "91e2ed2ac05a56f2dc8bc258f60028242777b977"),
 }
-GAUSSIAN_UNITS = ("gaussian.c", "gaussian_omp.c", "image_io.c")
+GAUSSIAN_UNITS = ("gaussian.c", "gaussian_omp.c")
 FLAGS = ["-std=gnu11", "-O3", "-fopenmp", "-ffp-contract=off", "-Wall", "-Wextra"]
 THREADS = (2, 4, 8, 12, 16)
 SIZES = (512, 1024, 2048)
@@ -35,7 +35,7 @@ def build(cc):
     build_dir = Path(".bench-cache/build")
     build_dir.mkdir(parents=True, exist_ok=True)
     units = [gaussian / name for name in GAUSSIAN_UNITS]
-    units += [gaussian / "gaussian_adapter.c", laplacian / "laplacian_adapter.c"]
+    units.append(laplacian / "laplacian_adapter.c")
     units += [Path("src/sobel/sobel_seq.c"), Path("src/sobel/sobel_omp.c"), Path("benchmark/main.c")]
     exe = build_dir / ("image_benchmark.exe" if os.name == "nt" else "image_benchmark")
     run(cc, *FLAGS, "-I", "src", *(str(source) for source in units), "-o", str(exe), "-lm")
