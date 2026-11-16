@@ -2,6 +2,7 @@
 /data/*
 !/data/raw/
 !/data/processed/
+!/data/processed_png/
 /dataset-source/
 /results/*
 !/results/windows_20261116_152359_7285082/
@@ -10,4 +11,10 @@
 !/results/windows_20261116_152359_7285082/summary.csv
 !/results/windows_20261116_152359_7285082/metrics_per_image.csv
 !/results/windows_20261116_152359_7285082/timings.csv
+!/results/windows_20261116_152359_7285082/images/
+!/results/windows_20261116_152359_7285082/samples/
+!/results/charts/
+/results/charts/*
+!/results/charts/windows_20261116_152359_7285082/
+!/results/charts/wsl_20261115_204823_469249545/
 __pycache__/

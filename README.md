@@ -15,7 +15,8 @@ So sánh phiên bản tuần tự và OpenMP của ba bộ lọc ảnh mức xá
 ```text
 data/
 ├── raw/                  20 ảnh gốc
-└── processed/            Ảnh grayscale ở ba kích thước và metadata.csv
+├── processed/            Ảnh grayscale dạng .bin và metadata.csv
+└── processed_png/        60 ảnh đầu vào dạng PNG
 src/
 ├── gaussian/             Mã Gaussian và adapter cho benchmark
 ├── sobel/                Sobel tuần tự, OpenMP và header dùng chung
@@ -41,6 +42,8 @@ Các tệp nguồn Gaussian và Laplacian từ hai commit trên nằm trực ti�
 ## Chạy lại
 
 Cần Python 3 và GCC hỗ trợ C11 và OpenMP. Repo có sẵn 60 ảnh đầu vào `.bin` trong [data/processed](data/processed), gồm 20 ảnh ở mỗi kích thước 512×512, 1024×1024 và 2048×2048. Chạy script tương ứng từ thư mục gốc sau khi clone. Mỗi lần chạy tự biên dịch, đo cả ba bộ lọc và tổng hợp CSV trong một thư mục kết quả mới.
+
+Có thể xem các ảnh đầu vào ở dạng PNG trong [data/processed_png](data/processed_png).
 
 ### Chạy trên Windows và xuất PNG
 
@@ -134,8 +137,11 @@ Tất cả 900 cặp so sánh theo ảnh và số luồng của ba bộ lọc đ
 | [summary.csv](results/windows_20261116_152359_7285082/summary.csv) | 45 dòng tổng hợp thời gian, hệ số tăng tốc, hiệu suất và sai số. |
 | [metrics_per_image.csv](results/windows_20261116_152359_7285082/metrics_per_image.csv) | 900 dòng kết quả theo từng ảnh và cấu hình. |
 | [timings.csv](results/windows_20261116_152359_7285082/timings.csv) | Các mẫu thời gian và sai số điểm ảnh dùng để tổng hợp. |
+| [Ảnh sau lọc](results/windows_20261116_152359_7285082/images/) | 1.080 ảnh PNG theo bộ lọc, kích thước và số luồng. |
+| [Ảnh mẫu .bin](results/windows_20261116_152359_7285082/samples/) | Đầu ra tuần tự và OpenMP 4 luồng của mỗi bộ lọc. |
+| [Biểu đồ Windows](results/charts/windows_20261116_152359_7285082/) | 9 biểu đồ về thời gian, hệ số tăng tốc và hiệu suất. |
 
-[Lượt đo WSL2 ngày 15/11](results/wsl_20261115_204823_469249545/summary.csv) được lưu riêng, với mỗi mẫu đo một lời gọi hàm lọc.
+[Lượt đo WSL2 ngày 15/11](results/wsl_20261115_204823_469249545/summary.csv) được lưu riêng, với mỗi mẫu đo một lời gọi hàm lọc. [Xem biểu đồ WSL2](results/charts/wsl_20261115_204823_469249545/).
 
 ## Xử lý WinError 4551
 
