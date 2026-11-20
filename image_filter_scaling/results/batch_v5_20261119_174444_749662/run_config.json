@@ -1,0 +1,85 @@
+{
+  "schema_version": 2,
+  "benchmark_version": 5,
+  "started": "2026-11-19T17:44:46+07:00",
+  "platform": "Windows-11-10.0.26300-SP0",
+  "processor": "AMD64 Family 26 Model 96 Stepping 0, AuthenticAMD",
+  "logical_processors": 16,
+  "hardware": {
+    "cpu": "AMD Ryzen AI 7 H 450 w/ Radeon 860M             ",
+    "physical_cores": 8,
+    "logical_processors": 16,
+    "max_clock_mhz": 2000,
+    "ram_bytes": 33459724288,
+    "model": "21VB"
+  },
+  "power_scheme": "Power Scheme GUID: 381b4222-f694-41f0-9685-ff5bb260df2e  (Balanced)",
+  "compiler": "gcc.exe (GCC) 16.2.0",
+  "flags": [
+    "-std=gnu11",
+    "-O3",
+    "-fopenmp",
+    "-ffp-contract=off",
+    "-Wall",
+    "-Wextra"
+  ],
+  "source_sha256": {
+    "benchmark.c": "c609dc5bcdfa150743cdad4414fc9d0edfc9b54dbde0850a0cdc29dff0cae20a",
+    "gaussian.c": "80634ecf02be5d57d46627e7dea50c1f733ec815a6581ea50df2657ffec91d16",
+    "gaussian_omp.c": "51946505d2ae97bb5c005691a42adbaf779eec7f1d0d6a040c0a0bda4e512ef1",
+    "sobel_seq.c": "5ff945822e9d79577e08961aa26e71e5896f2e94fc72747dabd8ad97df247a85",
+    "sobel_omp.c": "ab1df84d1c9f0742769b628849962a1423e2d75775aee8548c907839eb5111ea",
+    "laplacian_adapter.c": "92d84c20767b8fcb72accc7cc8fc1ebe40780bd2143597a14679d098e0e53812",
+    "gaussian.h": "237d1285477ec52c4b1ce33a4b481e73b1e3340ef93286f6e3aaac06cf8c48ba",
+    "sobel.h": "0066f0403474aa18bd7652f5e4d76f40cd35ad6754fce2e00f721a2c2b67b724",
+    "laplacian_adapter.h": "515b8f4060d77916a7c92d66762938aa566920554b687852d6d87842025fb04b",
+    "laplacian_benchmark.c": "ed0618bbfd3b3403305b9d211244be92b065a3924bf3fb2680bf84f0c4a17845"
+  },
+  "algorithms": [
+    "Gaussian",
+    "Sobel",
+    "Laplacian"
+  ],
+  "filter_selection": "all",
+  "gaussian": {
+    "kernel_size": 13,
+    "sigma": 2
+  },
+  "image_counts": [
+    100
+  ],
+  "modes": [
+    {
+      "strategy": "seq",
+      "threads": 0
+    },
+    {
+      "strategy": "intra",
+      "threads": 16
+    }
+  ],
+  "repeats": 10,
+  "warmup_batches_per_configuration": 1,
+  "timer": "QueryPerformanceCounter",
+  "timing_sampling": "adaptive_batch",
+  "minimum_sample_seconds_requested": 0.02,
+  "minimum_sample_ticks": 10,
+  "order": "rotate_counts_and_modes_per_round",
+  "omp_environment": {
+    "OMP_DYNAMIC": "FALSE",
+    "OMP_THREAD_LIMIT": "16",
+    "OMP_WAIT_POLICY": "PASSIVE",
+    "OMP_PROC_BIND": "FALSE",
+    "GOMP_SPINCOUNT": "0"
+  },
+  "dataset": {
+    "side": 2048,
+    "images": 100,
+    "format": "row-major float32 little-endian",
+    "sha256": "f208bd576771f9053cac95755f2169cb7f4ea06b556dc79af0e54069682e0149"
+  },
+  "manifest_sha256": "0373f465adebd198283069adf1f1cda211f046521c28e95220818d33aa4cc5a1",
+  "status": "complete",
+  "timer_tick_seconds": 1e-07,
+  "minimum_sample_seconds": 0.02
+}

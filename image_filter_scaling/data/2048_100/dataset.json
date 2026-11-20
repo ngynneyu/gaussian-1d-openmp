@@ -1,0 +1,6 @@
+{
+  "side": 2048,
+  "images": 100,
+  "format": "row-major float32 little-endian",
+  "sha256": "f208bd576771f9053cac95755f2169cb7f4ea06b556dc79af0e54069682e0149"
+}

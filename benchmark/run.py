@@ -20,7 +20,7 @@ PINS = {
 }
 GAUSSIAN_UNITS = ("gaussian.c", "gaussian_omp.c")
 FLAGS = ["-std=gnu11", "-O3", "-fopenmp", "-ffp-contract=off", "-Wall", "-Wextra"]
-THREADS = (2, 4, 8, 12, 16)
+THREADS = (1, 2, 4, 8, 12, 16)
 SIZES = (512, 1024, 2048)
 IMAGE_IDS = tuple(f"image_{index:02}" for index in range(1, 21))
 
@@ -100,8 +100,9 @@ def main():
         "started": datetime.now().astimezone().isoformat(timespec="seconds"),
         "cpu": cpu_name(), "logical_processors": os.cpu_count(), "platform": platform.platform(),
         "c_compiler": run(args.cc, "--version", capture_output=True, text=True).stdout.splitlines()[0],
-        "language": "C11", "timer": "omp_get_wtime",
+        "language": "C11", "timer": "QueryPerformanceCounter" if os.name == "nt" else "omp_get_wtime",
         "timing_sampling": "adaptive_batch",
+        "minimum_sample_seconds": 0.020, "minimum_sample_ticks": 10,
         "flags": FLAGS, "threads": THREADS, "warmup": 1, "repeats": 10,
         "environment": {key: env[key] for key in ("OMP_DYNAMIC", "OMP_WAIT_POLICY",
                        "OMP_THREAD_LIMIT", "OMP_PROC_BIND", "GOMP_SPINCOUNT")},

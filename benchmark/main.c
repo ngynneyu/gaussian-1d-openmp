@@ -14,15 +14,18 @@
 
 #ifdef _WIN32
 #include <direct.h>
+#include <windows.h>
 #else
 #include <sys/stat.h>
 #endif
 
 enum { IMAGE_COUNT = 20, REPEATS = 10, PATH_CAPACITY = 4096 };
 enum { MIN_TICKS_PER_SAMPLE = 10, MAX_CALLS_PER_SAMPLE = 65536 };
+static const double MINIMUM_SAMPLE_SECONDS = 0.020;
 static const int sizes[] = {512, 1024, 2048};
+static const int benchmark_threads[] = {1, 2, 4, 8, 12, 16};
 enum { SIZE_COUNT = sizeof sizes / sizeof sizes[0],
-       THREAD_CONFIGS = OPENMP_CONFIGS };
+       THREAD_CONFIGS = sizeof benchmark_threads / sizeof benchmark_threads[0] };
 
 typedef enum { SOBEL, GAUSSIAN, LAPLACIAN, FILTER_COUNT } Filter;
 static const char* const filter_names[] = {"Sobel", "Gaussian", "Laplacian"};
@@ -47,6 +50,44 @@ static _Noreturn void die(const char* format, ...) {
     fputc('\n', stderr);
     exit(2);
 }
+
+#ifdef _WIN32
+typedef LONGLONG TimerReading;
+static LARGE_INTEGER timer_frequency;
+
+static double initialize_timer(void) {
+    if (!QueryPerformanceFrequency(&timer_frequency)) {
+        die("Cannot initialize QueryPerformanceCounter");
+    }
+    return 1.0 / (double)timer_frequency.QuadPart;
+}
+
+static TimerReading timer_now(void) {
+    LARGE_INTEGER counter;
+    if (!QueryPerformanceCounter(&counter)) {
+        die("QueryPerformanceCounter failed");
+    }
+    return counter.QuadPart;
+}
+
+static double elapsed_seconds(TimerReading start) {
+    return (double)(timer_now() - start) / (double)timer_frequency.QuadPart;
+}
+#else
+typedef double TimerReading;
+
+static double initialize_timer(void) {
+    return omp_get_wtick();
+}
+
+static TimerReading timer_now(void) {
+    return omp_get_wtime();
+}
+
+static double elapsed_seconds(TimerReading start) {
+    return timer_now() - start;
+}
+#endif
 
 static void format_path(char path[PATH_CAPACITY], const char* format, ...) {
     va_list arguments;
@@ -140,24 +181,22 @@ static int apply_filter(const ImageJob* job, void* output, int threads) {
     }
 }
 
-static void measure(const ImageJob* job, void* output, int threads, double times[REPEATS]) {
+static void measure(const ImageJob* job, void* output, int threads, double minimum_seconds,
+                    double times[REPEATS]) {
     if (apply_filter(job, output, threads) != threads) {
         die("OpenMP created an unexpected team size during warm-up");
     }
-    const double tick_seconds = omp_get_wtick();
-    if (!isfinite(tick_seconds) || tick_seconds <= 0.0) {
-        die("Invalid OpenMP timer resolution");
-    }
-    // Allow for floating-point rounding when subtracting two clock readings.
-    const double minimum_seconds = (MIN_TICKS_PER_SAMPLE - 0.5) * tick_seconds;
     int calls = 1;
     for (int sample = 0; sample < REPEATS;) {
         bool correct_team_size = true;
-        const double start = omp_get_wtime();
+        const TimerReading start = timer_now();
         for (int call = 0; call < calls; ++call) {
             correct_team_size &= apply_filter(job, output, threads) == threads;
         }
-        const double elapsed = omp_get_wtime() - start;
+        const double elapsed = elapsed_seconds(start);
+        if (!isfinite(elapsed) || elapsed < 0.0) {
+            die("Invalid elapsed time");
+        }
         if (!correct_team_size) {
             die("OpenMP created an unexpected team size during measurement");
         }
@@ -167,7 +206,7 @@ static void measure(const ImageJob* job, void* output, int threads, double times
         }
         // Batch short calls so one sample spans multiple ticks even on coarse clocks.
         if (calls == MAX_CALLS_PER_SAMPLE) {
-            die("OpenMP timer did not advance enough to measure a sample");
+            die("The timer did not advance enough to measure a sample");
         }
         calls *= 2;
     }
@@ -203,7 +242,7 @@ static void write_times(FILE* output, const double times[REPEATS]) {
 }
 
 static bool benchmark_image(FILE* output, const char* samples_dir, const char* png_source_dir,
-                            const ImageJob* job, int image_index, size_t count) {
+                            const ImageJob* job, int image_index, size_t count, double minimum_seconds) {
     const char* name = filter_names[job->filter];
     const bool byte_output = job->filter == GAUSSIAN;
     const size_t pixel_bytes = byte_output ? sizeof(uint8_t) : sizeof(float);
@@ -214,7 +253,7 @@ static bool benchmark_image(FILE* output, const char* samples_dir, const char* p
     }
 
     double baseline[REPEATS];
-    measure(job, reference, 0, baseline);
+    measure(job, reference, 0, minimum_seconds, baseline);
     const bool example = job->size == sizes[0] && image_index == 1;
     if (example) {
         save_sample(samples_dir, name, "seq", reference, pixel_bytes, count);
@@ -222,9 +261,9 @@ static bool benchmark_image(FILE* output, const char* samples_dir, const char* p
 
     bool identical = true;
     for (int offset = 0; offset < THREAD_CONFIGS; ++offset) {
-        const int threads = openmp_thread_counts[(image_index - 1 + offset) % THREAD_CONFIGS];
+        const int threads = benchmark_threads[(image_index - 1 + offset) % THREAD_CONFIGS];
         double parallel[REPEATS];
-        measure(job, actual, threads, parallel);
+        measure(job, actual, threads, minimum_seconds, parallel);
         const ErrorMetrics errors = compare_outputs(reference, actual, count, byte_output);
         identical = identical && errors.max_error == 0.0;
         fprintf(output, "%s,%d,image_%02d,%d,%.12g,%.12g", name, job->size, image_index,
@@ -251,7 +290,7 @@ static bool benchmark_image(FILE* output, const char* samples_dir, const char* p
 static void check_teams(void) {
     omp_set_dynamic(0);
     for (int index = 0; index < THREAD_CONFIGS; ++index) {
-        const int threads = openmp_thread_counts[index];
+        const int threads = benchmark_threads[index];
         int actual = 0;
         #pragma omp parallel num_threads(threads)
         {
@@ -275,6 +314,11 @@ int main(int argc, char** argv) {
     if (*(const unsigned char*)&endian_probe != 1) {
         die("This benchmark requires little-endian float32");
     }
+    const double tick_seconds = initialize_timer();
+    if (!isfinite(tick_seconds) || tick_seconds <= 0.0) {
+        die("Invalid timer resolution");
+    }
+    const double minimum_seconds = fmax(MINIMUM_SAMPLE_SECONDS, MIN_TICKS_PER_SAMPLE * tick_seconds);
 
     char samples_dir[PATH_CAPACITY];
     char path[PATH_CAPACITY];
@@ -312,7 +356,7 @@ int main(int argc, char** argv) {
                     job.gaussian = gaussian_create(job.pixels, size);
                 }
                 const bool identical = benchmark_image(output, samples_dir, png_source_dir,
-                                                       &job, image, count);
+                                                       &job, image, count, minimum_seconds);
                 all_identical = all_identical && identical;
                 if (job.gaussian) {
                     gaussian_destroy(job.gaussian);

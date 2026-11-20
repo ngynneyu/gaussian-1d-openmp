@@ -1,7 +1,8 @@
 param(
     [string]$Compiler,
     [string]$Python = 'python',
-    [switch]$Images
+    [switch]$Images,
+    [switch]$Plots
 )
 
 $ErrorActionPreference = 'Stop'
@@ -21,6 +22,12 @@ if (-not $Compiler) {
 
 Push-Location -LiteralPath $PSScriptRoot
 try {
+    if ($Plots) {
+        & $Python -c 'import matplotlib'
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Install Matplotlib for this Python before using -Plots.'
+        }
+    }
     $out = "results/windows_$(Get-Date -Format 'yyyyMMdd_HHmmss_fffffff')"
     $benchmarkArgs = @('benchmark/run.py', '--cc', $Compiler, '--out', $out)
     if ($Images) {
@@ -34,6 +41,13 @@ try {
     & $Python benchmark/summarize.py $out
     if ($LASTEXITCODE -ne 0) {
         throw "Summary failed (exit code $LASTEXITCODE)."
+    }
+
+    if ($Plots) {
+        & $Python benchmark/plot.py $out --out results/charts --dpi 300
+        if ($LASTEXITCODE -ne 0) {
+            throw "Plotting failed (exit code $LASTEXITCODE)."
+        }
     }
 
     Write-Output "Results: $((Resolve-Path -LiteralPath $out).Path)"

@@ -1,0 +1,4 @@
+experiment,run,folder,started,status,timing_rows,comparisons,unique_time_samples,max_abs_error,max_rmse
+main,1,windows_20261119_152801_1982409,2026-11-19T15:28:02+07:00,complete (validated from full CSV coverage),1080,1080,12600,0,0
+main,2,windows_20261119_153808_5914934,2026-11-19T15:38:10+07:00,complete (validated from full CSV coverage),1080,1080,12600,0,0
+main,3,windows_20261119_154648_2619652,2026-11-19T15:46:49+07:00,complete (validated from full CSV coverage),1080,1080,12600,0,0
